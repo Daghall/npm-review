@@ -30,10 +30,11 @@ FILE *debug_log = NULL;
   fflush(debug_log); \
 }
 
-const short COLOR_DEFAULT = 0;
+const short COLOR_DEFAULT = -1;
 const short COLOR_SELECTED_PACKAGE = 1;
 const short COLOR_PACKAGE = 2;
 const short COLOR_OLD_VERSION = 3;
+const short COLOR_CURRENT_VERSION = 4;
 struct pkg {
   string name;
   string version;
@@ -63,13 +64,14 @@ int main(int argc, const char *argv[])
   keypad(stdscr, true);
   start_color();
   use_default_colors();
-  assume_default_colors(COLOR_WHITE, COLOR_BLACK);
+  assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
   noecho();
   curs_set(0); // Hide cursor
 
   init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
-  init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_BLACK);
-  init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_BLACK);
+  init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
+  init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_DEFAULT);
+  init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
 
   struct ml max_length; // TODO: Simplify
   max_length.name = 0;
@@ -299,11 +301,10 @@ void print_versions(struct pkg package)
   int number_of_lines = max(LINES - 1, (int) versions.size()); // TODO: Needed?
   debug("Number of versions: %d\n", number_of_lines);
   version_window = newpad(LINES, COLS);
-  wbkgd(version_window, A_BOLD | COLOR_PAIR(COLOR_DEFAULT));
   size_t index = 0;
   for_each(versions.begin(), versions.end(), [package_version, &index](string &version) {
     if (version == package_version) {
-      wattron(version_window, COLOR_PAIR(COLOR_PACKAGE));
+      wattron(version_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
       if (selected_version < 0) {
         selected_version = index;
       }
