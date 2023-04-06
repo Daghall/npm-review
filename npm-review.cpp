@@ -81,8 +81,13 @@ int main(int argc, const char *argv[])
   // TODO: signals and/or ctrl-c/ctrl-d
   // TODO: Handle scrolling
   // TODO: Print x/y in list
-  package_window = newpad(LINES, COLS);
+  int number_of_packages = max(LINES - 1, (int) pkgs.size());
+  package_window = newpad(number_of_packages, COLS);
+  debug("Number of packages: %d\n", number_of_packages);
 
+  int start = 0;
+
+  // TODO: Fix initial rendering
   while (true) {
     size_t y_pos = 0;
     size_t index = 0;
@@ -92,16 +97,28 @@ int main(int argc, const char *argv[])
       if (index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
       }
-      wprintw(package_window, " %-*s  %-*s%s\n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), package.isDev ? "  (DEV)" : "");
+      wprintw(package_window, " %-*s  %-*s%s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), package.isDev ? "  (DEV)" : "");
       ++y_pos;
       ++index;
     });
-    debug("Refresh...\n");
-      // TODO: Fix initial rendering
-    prefresh(package_window, selected_package, 0, 0, 0, LINES, COLS - 7);
-    if (version_window) {
-      prefresh(version_window, 0, 0, 0, COLS / 2, LINES , COLS - 7);
+
+    // Handle scrolling of packages
+    if (selected_package == 0) {
+      start = 0;
+    } else if (selected_package == number_of_packages - 1) {
+      start = number_of_packages - LINES;
+    } else if (selected_package >= LINES + start) {
+      ++start;
+    } else if (selected_package < start) {
+      --start;
     }
+
+    debug("Refresh... %d - %d | %d\n", selected_package, LINES, start);
+    prefresh(package_window, start, 0, 0, 0, LINES - 2, COLS - 0);
+    if (version_window) {
+      prefresh(version_window, 0, 0, 0, COLS / 2 + 1, LINES , COLS - 7);
+    }
+
     move(LINES - 1, 0); // Move cursor to make `npm install` render here
     int c = wgetch(stdscr);
 
