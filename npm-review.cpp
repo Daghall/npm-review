@@ -21,6 +21,7 @@ void print_versions(struct pkg package);
 void get_versions(struct pkg package);
 void sync_shell_command(const string command, std::function<void(char*)> callback);
 void install_pagage(struct pkg package, const string new_version);
+void hide_cursor();
 int exit();
 
 // Debugging
@@ -70,7 +71,7 @@ int main(int argc, const char *argv[])
   use_default_colors();
   assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
   noecho();
-  curs_set(0); // Hide cursor
+  hide_cursor();
 
   init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
   init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
@@ -94,7 +95,6 @@ int main(int argc, const char *argv[])
   debug("Number of packages: %d\n", number_of_packages);
 
   int start = 0;
-
   // TODO: Fix initial rendering
   while (true) {
     size_t y_pos = 0;
@@ -296,6 +296,8 @@ void install_pagage(struct pkg package, const string new_version)
     prefresh(version_window, 0, 0, 1, COLS / 2, LINES - 1, COLS - 1);
   });
 
+  hide_cursor();
+
   read_packages(NULL);
   selected_version = -1;
   print_versions(pkgs.at(selected_package));
@@ -370,6 +372,13 @@ void sync_shell_command(const string command, std::function<void(char*)> callbac
   }
 
   pclose(output);
+}
+
+// Hide cursor
+void hide_cursor()
+{
+  curs_set(1); // Explicitly show it to avoid rendering bug after `npm install`
+  curs_set(0);
 }
 
 int exit()
