@@ -35,6 +35,10 @@ const short COLOR_SELECTED_PACKAGE = 1;
 const short COLOR_PACKAGE = 2;
 const short COLOR_OLD_VERSION = 3;
 const short COLOR_CURRENT_VERSION = 4;
+const short COLOR_INFO_BAR = 5;
+
+const unsigned short BOTTOM_BAR_HEIGHT = 2;
+
 struct pkg {
   string name;
   string version;
@@ -72,6 +76,9 @@ int main(int argc, const char *argv[])
   init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_DEFAULT);
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
+  init_pair(COLOR_INFO_BAR, COLOR_BLACK, COLOR_BLUE);
+
+  const unsigned short PACKAGE_WINDOW_HEIGHT = LINES - 2;
 
   struct ml max_length; // TODO: Simplify
   max_length.name = 0;
@@ -82,7 +89,6 @@ int main(int argc, const char *argv[])
   // TODO: Handle resize
   // TODO: signals and/or ctrl-c/ctrl-d
   // TODO: Handle scrolling
-  // TODO: Print x/y in list
   int number_of_packages = max(LINES - 1, (int) pkgs.size());
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
@@ -108,20 +114,25 @@ int main(int argc, const char *argv[])
     if (selected_package == 0) {
       start = 0;
     } else if (selected_package == number_of_packages - 1) {
-      start = number_of_packages - LINES;
-    } else if (selected_package >= LINES + start) {
+      start = number_of_packages - PACKAGE_WINDOW_HEIGHT;
+    } else if (selected_package >= PACKAGE_WINDOW_HEIGHT + start) {
       ++start;
     } else if (selected_package < start) {
       --start;
     }
 
     debug("Refresh... %d - %d | %d\n", selected_package, LINES, start);
-    prefresh(package_window, start, 0, 0, 0, LINES - 2, COLS - 0);
+    prefresh(package_window, start, 0, 0, 0, PACKAGE_WINDOW_HEIGHT - 1, COLS - 0);
     if (version_window) {
       prefresh(version_window, 0, 0, 0, COLS / 2 + 1, LINES , COLS - 7);
     }
 
+    const size_t package_number_width = 2; // TODO: Calculate properly
+    attron(COLOR_PAIR(COLOR_INFO_BAR));
+    mvprintw(LINES - 2, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, number_of_packages);
+
     move(LINES - 1, 0); // Move cursor to make `npm install` render here
+
     int c = wgetch(stdscr);
 
     if (version_window) {
