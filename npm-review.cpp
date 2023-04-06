@@ -31,23 +31,23 @@ FILE *debug_log = NULL;
   fflush(debug_log); \
 }
 
-const short COLOR_DEFAULT = -1;
-const short COLOR_SELECTED_PACKAGE = 1;
-const short COLOR_PACKAGE = 2;
-const short COLOR_OLD_VERSION = 3;
-const short COLOR_CURRENT_VERSION = 4;
-const short COLOR_INFO_BAR = 5;
+const unsigned short COLOR_DEFAULT = -1;
+const unsigned short COLOR_SELECTED_PACKAGE = 1;
+const unsigned short COLOR_PACKAGE = 2;
+const unsigned short COLOR_OLD_VERSION = 3;
+const unsigned short COLOR_CURRENT_VERSION = 4;
+const unsigned short COLOR_INFO_BAR = 5;
 
 const unsigned short BOTTOM_BAR_HEIGHT = 2;
 
 struct pkg {
   string name;
   string version;
-  bool isDev;
+  bool is_dev;
 };
 struct ml {
-  int name;
-  int version;
+  unsigned short name;
+  unsigned short version;
 };
 
 WINDOW *version_window = NULL;
@@ -55,8 +55,8 @@ WINDOW *package_window = NULL;
 
 vector<pkg> pkgs;
 vector<string> versions;
-int selected_package = 0;
-int selected_version = 0;
+unsigned short selected_package = 0;
+short selected_version = 0;
 
 int main(int argc, const char *argv[])
 {
@@ -90,22 +90,23 @@ int main(int argc, const char *argv[])
   // TODO: Handle resize
   // TODO: signals and/or ctrl-c/ctrl-d
   // TODO: Handle scrolling
-  int number_of_packages = max(LINES - 1, (int) pkgs.size());
+  const unsigned short number_of_packages = max(LINES - 1, (int) pkgs.size());
+  const size_t package_number_width = 2; // TODO: Calculate properly
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
 
-  int start = 0;
+  unsigned short start = 0;
   // TODO: Fix initial rendering
   while (true) {
-    size_t y_pos = 0;
-    size_t index = 0;
+    unsigned short y_pos = 0;
+    unsigned short index = 0;
     werase(package_window);
     for_each(pkgs.begin(), pkgs.end(), [&y_pos, &index, &max_length](pkg &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
       if (index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
       }
-      wprintw(package_window, " %-*s  %-*s%s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), package.isDev ? "  (DEV)" : "");
+      wprintw(package_window, " %-*s  %-*s%s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), package.is_dev ? "  (DEV)" : "");
       ++y_pos;
       ++index;
     });
@@ -127,17 +128,16 @@ int main(int argc, const char *argv[])
       prefresh(version_window, 0, 0, 0, COLS / 2 + 1, LINES , COLS - 7);
     }
 
-    const size_t package_number_width = 2; // TODO: Calculate properly
     attron(COLOR_PAIR(COLOR_INFO_BAR));
     mvprintw(LINES - 2, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, number_of_packages);
 
     move(LINES - 1, 0); // Move cursor to make `npm install` render here
 
-    int c = wgetch(stdscr);
+    const unsigned int character = wgetch(stdscr);
 
     if (version_window) {
-      debug("Sending key '%c' to version window\n", c);
-      switch (c) {
+      debug("Sending key '%c' to version window\n", character);
+      switch (character) {
         case KEY_DOWN:
         case 'J':
           // TODO: refresh package list first
@@ -172,8 +172,8 @@ int main(int argc, const char *argv[])
           break;
       }
     } else {
-      debug("Sending key '%c' to main window\n", c);
-      switch (c) {
+      debug("Sending key '%c' to main window\n", character);
+      switch (character) {
         case KEY_DOWN:
         case 'j':
         case 'J':
@@ -228,7 +228,7 @@ void read_packages(struct ml *max_length)
     pkgs.push_back({
       .name = name,
       .version = version,
-      .isDev = origin == ".devDependencies"
+      .is_dev = origin == ".devDependencies"
     });
 
     /* debug("%lu - %d\n", name.length(), max_length->name); */
