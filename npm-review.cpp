@@ -130,6 +130,7 @@ int main(int argc, const char *argv[])
 
     attron(COLOR_PAIR(COLOR_INFO_BAR));
     mvprintw(LINES - 2, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, number_of_packages);
+    attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
     move(LINES - 1, 0); // Move cursor to make `npm install` render here
 
@@ -245,9 +246,8 @@ void read_packages(struct ml *max_length)
 void get_versions(struct pkg package)
 {
   const char* package_name = package.name.c_str();
-  mvprintw(0, COLS / 2 - 1, "Versions:");
-  mvprintw(1, COLS / 2 - 1, "  Loading...                 "); // TODO: Pretty up
-  for (int i = 2; i < LINES; ++i) {
+  mvprintw(0, COLS / 2 - 1, "  Loading...                 "); // TODO: Pretty up
+  for (int i = 1; i < LINES - BOTTOM_BAR_HEIGHT; ++i) {
     mvprintw(i, COLS / 2, "                               "); // TODO: Pretty up
   }
   refresh();
