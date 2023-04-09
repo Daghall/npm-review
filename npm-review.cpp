@@ -12,23 +12,38 @@
 
 using namespace std;
 
+typedef struct {
+  string name;
+  string version;
+  bool is_dev;
+} PACKAGE;
+
+typedef struct {
+  unsigned short name;
+  unsigned short version;
+} MAX_LENGTH;
+
 // Functions
-void read_packages(struct ml *foo);
+void read_packages(MAX_LENGTH *foo);
 vector<string> split_string(string package_string);
 vector<string> shell_command(const string);
-void print_versions(struct pkg package);
-void get_versions(struct pkg package);
+void print_versions(PACKAGE package);
+void get_versions(PACKAGE package);
 void sync_shell_command(const string command, std::function<void(char*)> callback);
-void install_pagage(struct pkg package, const string new_version);
+void install_pagage(PACKAGE package, const string new_version);
 void hide_cursor();
 int exit();
 
+typedef unsigned short USHORT;
+
 // Debugging
 FILE *debug_log = NULL;
-#define debug(...) if (debug_log != NULL) { \
+#define debug(...)    if (debug_log != NULL) { \
   fprintf(debug_log, __VA_ARGS__); \
   fflush(debug_log); \
 }
+
+#define LIST_HEIGHT   (USHORT)(LINES - BOTTOM_BAR_HEIGHT)
 
 const unsigned short COLOR_DEFAULT = -1;
 const unsigned short COLOR_SELECTED_PACKAGE = 1;
@@ -39,20 +54,10 @@ const unsigned short COLOR_INFO_BAR = 5;
 
 const unsigned short BOTTOM_BAR_HEIGHT = 2;
 
-struct pkg {
-  string name;
-  string version;
-  bool is_dev;
-};
-struct ml {
-  unsigned short name;
-  unsigned short version;
-};
-
 WINDOW *version_window = NULL;
 WINDOW *package_window = NULL;
 
-vector<pkg> pkgs;
+vector<PACKAGE> pkgs;
 vector<string> versions;
 unsigned short selected_package = 0;
 short selected_version = 0;
@@ -78,9 +83,7 @@ int main(int argc, const char *argv[])
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_INFO_BAR, COLOR_BLACK, COLOR_BLUE);
 
-  const unsigned short LIST_HEIGHT = LINES - 2;
-
-  struct ml max_length; // TODO: Simplify
+  MAX_LENGTH max_length;
   max_length.name = 0;
   max_length.version = 0;
 
@@ -90,7 +93,8 @@ int main(int argc, const char *argv[])
   // TODO: Signals and/or ctrl-c/ctrl-d
   // TODO: Handle searching/filtering
   // TODO: Sorting?
-  const unsigned short number_of_packages = max(LINES - BOTTOM_BAR_HEIGHT, (int) pkgs.size());
+  const unsigned short package_size = (short) pkgs.size();
+  const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
   const size_t package_number_width = 2; // TODO: Calculate properly
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
@@ -103,7 +107,7 @@ int main(int argc, const char *argv[])
     unsigned short y_pos = 0;
     unsigned short index = 0;
     werase(package_window);
-    for_each(pkgs.begin(), pkgs.end(), [&y_pos, &index, &max_length](pkg &package) {
+    for_each(pkgs.begin(), pkgs.end(), [&y_pos, &index, &max_length](PACKAGE &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
       if (index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
@@ -125,7 +129,7 @@ int main(int argc, const char *argv[])
     }
 
     // Handle scrolling of versions
-    const unsigned short number_of_versions = max(LINES - BOTTOM_BAR_HEIGHT, (int) versions.size());
+    const unsigned short number_of_versions = max(LIST_HEIGHT, (USHORT) versions.size());
 
     if (selected_version <= 0) {
       start_versions = 0;
@@ -245,7 +249,7 @@ vector<string> split_string(string package_string) {
 }
 
 // Parse package name and version
-void read_packages(struct ml *max_length)
+void read_packages(MAX_LENGTH *max_length)
 {
   debug("read_packages\n");
   string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r < package.json; done";
@@ -275,11 +279,11 @@ void read_packages(struct ml *max_length)
 }
 
 
-void get_versions(struct pkg package)
+void get_versions(PACKAGE package)
 {
   const char* package_name = package.name.c_str();
   mvprintw(0, COLS / 2 - 1, "  Loading...                 "); // TODO: Pretty up
-  for (int i = 1; i < LINES - BOTTOM_BAR_HEIGHT; ++i) {
+  for (int i = 1; i < LIST_HEIGHT; ++i) {
     mvprintw(i, COLS / 2, "                               "); // TODO: Pretty up
   }
   refresh();
@@ -320,11 +324,11 @@ void get_versions(struct pkg package)
   print_versions(package);
 }
 
-void install_pagage(struct pkg package, const string new_version)
+void install_pagage(PACKAGE package, const string new_version)
 {
   char command[1024];
   snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
-  move(LINES - BOTTOM_BAR_HEIGHT, 0);
+  move(LIST_HEIGHT, 0);
   sync_shell_command(command, [](char* line) {
     wprintw(version_window, "%s\n", line);
   });
@@ -337,14 +341,14 @@ void install_pagage(struct pkg package, const string new_version)
 }
 
 // Print versions
-void print_versions(struct pkg package)
+void print_versions(PACKAGE package)
 {
   string package_version = package.version;
   if (version_window) {
     wclear(version_window);
     delwin(version_window);
   }
-  int number_of_versions = max(LINES - BOTTOM_BAR_HEIGHT, (int) versions.size());
+  int number_of_versions = max(LIST_HEIGHT, (USHORT) versions.size());
   debug("Number of versions: %d\n", number_of_versions);
   version_window = newpad(number_of_versions, COLS);
   size_t index = 0;
