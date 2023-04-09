@@ -150,8 +150,11 @@ int main(int argc, const char *argv[])
     }
 
     attron(COLOR_PAIR(COLOR_INFO_BAR));
-    // TODO: Add version X/Y
-    mvprintw(LINES - 2, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, number_of_packages);
+    mvprintw(LIST_HEIGHT, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, package_size);
+    if (version_window) {
+      const unsigned short version_number_width = number_width(versions.size());
+      mvprintw(LIST_HEIGHT, COLS / 2, "  %*d/%d", version_number_width, selected_version + 1, versions.size());
+    }
     attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
     move(LINES - 1, 0); // Move cursor to make `npm install` render here
