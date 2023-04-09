@@ -302,7 +302,7 @@ void get_versions(PACKAGE package)
   selected_version = -1;
 
   char command[1024];
-  snprintf(command, 1024, "npm info %s versions --json | jq 'reverse | .[]' -r", package_name);
+  snprintf(command, 1024, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package_name);
 
   versions = vector<string>();
 
