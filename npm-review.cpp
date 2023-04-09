@@ -30,7 +30,7 @@ vector<string> shell_command(const string);
 void print_versions(PACKAGE package);
 void get_versions(PACKAGE package);
 void sync_shell_command(const string command, std::function<void(char*)> callback);
-void install_pagage(PACKAGE package, const string new_version);
+void install_package(PACKAGE package, const string new_version);
 const unsigned short number_width(unsigned short number_of_packages);
 void hide_cursor();
 int exit();
@@ -43,6 +43,7 @@ FILE *debug_log = NULL;
   fprintf(debug_log, __VA_ARGS__); \
   fflush(debug_log); \
 }
+bool fake_versions = false;
 
 #define LIST_HEIGHT   (USHORT)(LINES - BOTTOM_BAR_HEIGHT)
 
@@ -65,8 +66,15 @@ short selected_version = 0;
 
 int main(int argc, const char *argv[])
 {
-  if (argc > 1 && strcmp(argv[1], "-d") == 0) {
-     debug_log = fopen("./log", "w");
+  while (--argc > 0) {
+    switch (argv[argc][1]) {
+      case 'd':
+        debug_log = fopen("./log", "w");
+        break;
+      case 'f':
+        fake_versions = true;
+        break;
+    }
   }
 
   debug("Init\n");
@@ -94,6 +102,7 @@ int main(int argc, const char *argv[])
   // TODO: Signals and/or ctrl-c/ctrl-d
   // TODO: Handle searching/filtering
   // TODO: Sorting?
+  // TODO: Cache versions?
   const unsigned short package_size = (short) pkgs.size();
   const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
   const size_t package_number_width = number_width(package_size);
@@ -195,7 +204,7 @@ int main(int argc, const char *argv[])
           return exit();
         case '\n':
           // TODO: Add confirm?
-          install_pagage(pkgs.at(selected_package), versions.at(selected_version));
+          install_package(pkgs.at(selected_package), versions.at(selected_version));
           break;
         case 'g':
           selected_version = 0;
@@ -257,7 +266,6 @@ void read_packages(MAX_LENGTH *max_length)
 {
   debug("read_packages\n");
   string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r < package.json; done";
-  /* string command = "jq '.dependencies | keys_unsorted[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\"))\"' -r < package.json"; */
   vector<string> packages = shell_command(command);
   pkgs.clear();
 
@@ -272,7 +280,6 @@ void read_packages(MAX_LENGTH *max_length)
       .is_dev = origin == ".devDependencies"
     });
 
-    /* debug("%lu - %d\n", name.length(), max_length->name); */
     if (max_length && name.length() > max_length->name) {
       max_length->name = name.length();
     }
@@ -298,37 +305,41 @@ void get_versions(PACKAGE package)
   snprintf(command, 1024, "npm info %s versions --json | jq 'reverse | .[]' -r", package_name);
 
   versions = vector<string>();
-  versions.push_back("25.0.0");
-  versions.push_back("24.0.0");
-  versions.push_back("23.0.0");
-  versions.push_back("22.0.0");
-  versions.push_back("21.0.0");
-  versions.push_back("20.0.0");
-  versions.push_back("19.0.0");
-  versions.push_back("18.0.0");
-  versions.push_back("17.0.0");
-  versions.push_back("16.0.0");
-  versions.push_back("15.0.0");
-  versions.push_back("14.0.0");
-  versions.push_back("13.0.0");
-  versions.push_back("12.0.0");
-  versions.push_back("12.0.0");
-  versions.push_back("11.0.0");
-  versions.push_back("10.0.0");
-  versions.push_back("9.0.0");
-  versions.push_back("8.0.0");
-  versions.push_back("7.0.0");
-  versions.push_back("6.0.0");
-  versions.push_back("5.0.0");
-  versions.push_back("4.0.0");
-  versions.push_back("3.0.0");
-  versions.push_back("2.0.0");
-  versions.push_back("1.0.0");
-  /* versions = shell_command(command); */
+
+  if (fake_versions) {
+    versions.push_back("25.0.0");
+    versions.push_back("24.0.0");
+    versions.push_back("23.0.0");
+    versions.push_back("22.0.0");
+    versions.push_back("21.0.0");
+    versions.push_back("20.0.0");
+    versions.push_back("19.0.0");
+    versions.push_back("18.0.0");
+    versions.push_back("17.0.0");
+    versions.push_back("16.0.0");
+    versions.push_back("15.0.0");
+    versions.push_back("14.0.0");
+    versions.push_back("13.0.0");
+    versions.push_back("12.0.0");
+    versions.push_back("12.0.0");
+    versions.push_back("11.0.0");
+    versions.push_back("10.0.0");
+    versions.push_back("9.0.0");
+    versions.push_back("8.0.0");
+    versions.push_back("7.0.0");
+    versions.push_back("6.0.0");
+    versions.push_back("5.0.0");
+    versions.push_back("4.0.0");
+    versions.push_back("3.0.0");
+    versions.push_back("2.0.0");
+    versions.push_back("1.0.0");
+  } else {
+    versions = shell_command(command);
+  }
   print_versions(package);
 }
 
-void install_pagage(PACKAGE package, const string new_version)
+void install_package(PACKAGE package, const string new_version)
 {
   char command[1024];
   snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
