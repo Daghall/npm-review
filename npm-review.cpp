@@ -189,6 +189,14 @@ int main(int argc, const char *argv[])
           // TODO: Add confirm?
           install_pagage(pkgs.at(selected_package), versions.at(selected_version));
           break;
+        case 'g':
+          selected_version = 0;
+          print_versions(pkgs.at(selected_package));
+          break;
+        case 'G':
+          selected_version = number_of_versions - 1;
+          print_versions(pkgs.at(selected_package));
+          break;
       }
     } else {
       debug("Sending key '%c' to main window\n", character);
@@ -210,6 +218,12 @@ int main(int argc, const char *argv[])
         case 'q':
         case 'Q':
           return exit();
+        case 'g':
+          selected_package = 0;
+          break;
+        case 'G':
+          selected_package = number_of_packages - 1;
+          break;
       }
     }
   }
