@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
@@ -79,7 +78,7 @@ int main(int argc, const char *argv[])
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_INFO_BAR, COLOR_BLACK, COLOR_BLUE);
 
-  const unsigned short PACKAGE_WINDOW_HEIGHT = LINES - 2;
+  const unsigned short LIST_HEIGHT = LINES - 2;
 
   struct ml max_length; // TODO: Simplify
   max_length.name = 0;
@@ -88,14 +87,17 @@ int main(int argc, const char *argv[])
   read_packages(&max_length);
 
   // TODO: Handle resize
-  // TODO: signals and/or ctrl-c/ctrl-d
-  // TODO: Handle scrolling
-  const unsigned short number_of_packages = max(LINES - 1, (int) pkgs.size());
+  // TODO: Signals and/or ctrl-c/ctrl-d
+  // TODO: Handle searching/filtering
+  // TODO: Sorting?
+  const unsigned short number_of_packages = max(LINES - BOTTOM_BAR_HEIGHT, (int) pkgs.size());
   const size_t package_number_width = 2; // TODO: Calculate properly
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
 
-  unsigned short start = 0;
+  unsigned short start_packages = 0;
+  unsigned short start_versions = 0;
+
   // TODO: Fix initial rendering
   while (true) {
     unsigned short y_pos = 0;
@@ -113,22 +115,37 @@ int main(int argc, const char *argv[])
 
     // Handle scrolling of packages
     if (selected_package == 0) {
-      start = 0;
+      start_packages = 0;
     } else if (selected_package == number_of_packages - 1) {
-      start = number_of_packages - PACKAGE_WINDOW_HEIGHT;
-    } else if (selected_package >= PACKAGE_WINDOW_HEIGHT + start) {
-      ++start;
-    } else if (selected_package < start) {
-      --start;
+      start_packages = number_of_packages - LIST_HEIGHT;
+    } else if (selected_package >= LIST_HEIGHT + start_packages) {
+      ++start_packages;
+    } else if (selected_package < start_packages) {
+      --start_packages;
     }
 
-    debug("Refresh... %d - %d | %d\n", selected_package, LINES, start);
-    prefresh(package_window, start, 0, 0, 0, PACKAGE_WINDOW_HEIGHT - 1, COLS - 0);
+    // Handle scrolling of versions
+    const unsigned short number_of_versions = max(LINES - BOTTOM_BAR_HEIGHT, (int) versions.size());
+
+    if (selected_version <= 0) {
+      start_versions = 0;
+    } else if (selected_version == number_of_versions - 1) {
+      start_versions = number_of_versions - LIST_HEIGHT;
+    } else if (selected_version >= LIST_HEIGHT + start_versions) {
+      start_versions = selected_version - LIST_HEIGHT + 1;
+    } else if (selected_version < start_versions) {
+      --start_versions;
+    }
+
+    debug("Refresh... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
+    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS);
     if (version_window) {
-      prefresh(version_window, 0, 0, 0, COLS / 2 + 1, LINES , COLS - 7);
+      debug("Refresh... %d - %d | %d\n", selected_version, LIST_HEIGHT, start_versions);
+      prefresh(version_window, start_versions, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
     }
 
     attron(COLOR_PAIR(COLOR_INFO_BAR));
+    // TODO: Add version X/Y
     mvprintw(LINES - 2, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, number_of_packages);
     attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
@@ -144,12 +161,14 @@ int main(int argc, const char *argv[])
           // TODO: refresh package list first
           selected_package = (selected_package + 1) % pkgs.size();
           get_versions(pkgs.at(selected_package));
+          start_versions = 0;
           break;
         case KEY_UP:
         case 'K':
           // TODO: refresh package list first
           selected_package = (selected_package - 1 + pkgs.size()) % pkgs.size();
           get_versions(pkgs.at(selected_package));
+          start_versions = 0;
           break;
         case 'j':
           selected_version = min(selected_version + 1, (int) versions.size() - 1);
@@ -161,7 +180,6 @@ int main(int argc, const char *argv[])
           break;
         case 'q':
           wclear(version_window);
-          prefresh(version_window, 0, 0, 0, COLS / 2, LINES , COLS - 7);
           delwin(version_window);
           version_window = NULL;
           break;
@@ -258,9 +276,14 @@ void get_versions(struct pkg package)
   snprintf(command, 1024, "npm info %s versions --json | jq 'reverse | .[]' -r", package_name);
 
   versions = vector<string>();
-  versions.push_back("32.0.0");
-  versions.push_back("27.0.0");
+  versions.push_back("25.0.0");
+  versions.push_back("24.0.0");
+  versions.push_back("23.0.0");
   versions.push_back("22.0.0");
+  versions.push_back("21.0.0");
+  versions.push_back("20.0.0");
+  versions.push_back("19.0.0");
+  versions.push_back("18.0.0");
   versions.push_back("17.0.0");
   versions.push_back("16.0.0");
   versions.push_back("15.0.0");
@@ -287,13 +310,9 @@ void install_pagage(struct pkg package, const string new_version)
 {
   char command[1024];
   snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
-  move(0, 0);
-  /* move(LINES - 2, 0); */
-  wmove(version_window, LINES - 1, 0);
-  version_window = newpad(LINES, COLS);
+  move(LINES - BOTTOM_BAR_HEIGHT, 0);
   sync_shell_command(command, [](char* line) {
     wprintw(version_window, "%s\n", line);
-    prefresh(version_window, 0, 0, 1, COLS / 2, LINES - 1, COLS - 1);
   });
 
   hide_cursor();
@@ -311,9 +330,9 @@ void print_versions(struct pkg package)
     wclear(version_window);
     delwin(version_window);
   }
-  int number_of_lines = max(LINES - 1, (int) versions.size()); // TODO: Needed?
-  debug("Number of versions: %d\n", number_of_lines);
-  version_window = newpad(LINES, COLS);
+  int number_of_versions = max(LINES - BOTTOM_BAR_HEIGHT, (int) versions.size());
+  debug("Number of versions: %d\n", number_of_versions);
+  version_window = newpad(number_of_versions, COLS);
   size_t index = 0;
   for_each(versions.begin(), versions.end(), [package_version, &index](string &version) {
     if (version == package_version) {
@@ -334,9 +353,6 @@ void print_versions(struct pkg package)
     wattroff(version_window, A_STANDOUT);
     ++index;
   });
-
-  int start = 0;
-  prefresh(version_window, start, 0, 1, COLS / 2, LINES - 1, COLS - 1);
 }
 
 // Shell command
