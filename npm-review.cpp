@@ -31,6 +31,7 @@ void print_versions(PACKAGE package);
 void get_versions(PACKAGE package);
 void sync_shell_command(const string command, std::function<void(char*)> callback);
 void install_pagage(PACKAGE package, const string new_version);
+const unsigned short number_width(unsigned short number_of_packages);
 void hide_cursor();
 int exit();
 
@@ -95,7 +96,7 @@ int main(int argc, const char *argv[])
   // TODO: Sorting?
   const unsigned short package_size = (short) pkgs.size();
   const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
-  const size_t package_number_width = 2; // TODO: Calculate properly
+  const size_t package_number_width = number_width(package_size);
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
 
@@ -406,6 +407,19 @@ void sync_shell_command(const string command, std::function<void(char*)> callbac
   }
 
   pclose(output);
+}
+
+const unsigned short number_width(unsigned short number)
+{
+  unsigned short rest = number;
+  unsigned short i = 0;
+
+  while (rest > 0) {
+    rest /= 10;
+    ++i;
+  }
+
+  return i;
 }
 
 // Hide cursor
