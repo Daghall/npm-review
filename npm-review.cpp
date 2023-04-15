@@ -1,17 +1,21 @@
+#include <algorithm>
+#include <cmath>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <iterator>
-#include <stdio.h>
-#include <cmath>
+#include <iterator>
 #include <ncurses.h>
+#include <regex>
+#include <stdio.h>
 #include <string>
 #include <vector>
-#include <functional>
 
 using namespace std;
 
+// Types
 typedef struct {
   string name;
   string version;
@@ -23,19 +27,20 @@ typedef struct {
   unsigned short version;
 } MAX_LENGTH;
 
+typedef unsigned short USHORT;
+
 // Functions
 void read_packages(MAX_LENGTH *foo);
 vector<string> split_string(string package_string);
 vector<string> shell_command(const string);
 void print_versions(PACKAGE package);
 void get_versions(PACKAGE package);
-void sync_shell_command(const string command, std::function<void(char*)> callback);
+int sync_shell_command(const string command, std::function<void(char*)> callback);
 void install_package(PACKAGE package, const string new_version);
 const unsigned short number_width(unsigned short number_of_packages);
+bool is_printable(char character);
 void hide_cursor();
 int exit();
-
-typedef unsigned short USHORT;
 
 // Debugging
 FILE *debug_log = NULL;
@@ -45,7 +50,9 @@ FILE *debug_log = NULL;
 }
 bool fake_versions = false;
 
+// Constants
 #define LIST_HEIGHT   (USHORT)(LINES - BOTTOM_BAR_HEIGHT)
+#define LAST_LINE     (USHORT)(LINES - 1)
 
 const unsigned short COLOR_DEFAULT = -1;
 const unsigned short COLOR_SELECTED_PACKAGE = 1;
@@ -55,11 +62,14 @@ const unsigned short COLOR_CURRENT_VERSION = 4;
 const unsigned short COLOR_INFO_BAR = 5;
 
 const unsigned short BOTTOM_BAR_HEIGHT = 2;
+const unsigned short KEY_ESC = 0x1B;
+const unsigned short KEY_DELETE = 0x7F;
 
+// Global variables
 WINDOW *version_window = NULL;
 WINDOW *package_window = NULL;
-
 vector<PACKAGE> pkgs;
+vector<PACKAGE> filtered_packages;
 vector<string> versions;
 unsigned short selected_package = 0;
 short selected_version = 0;
@@ -77,6 +87,7 @@ int main(int argc, const char *argv[])
     }
   }
 
+  // TODO: Break out initialization to its own function
   debug("Init\n");
   initscr();
   keypad(stdscr, true);
@@ -100,24 +111,48 @@ int main(int argc, const char *argv[])
 
   // TODO: Handle resize
   // TODO: Signals and/or ctrl-c/ctrl-d
-  // TODO: Handle searching/filtering
   // TODO: Sorting?
   // TODO: Cache versions?
   const unsigned short package_size = (short) pkgs.size();
   const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
-  const size_t package_number_width = number_width(package_size);
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
 
   unsigned short start_packages = 0;
   unsigned short start_versions = 0;
+  bool search_mode = false;
+  string search_string = "";
 
   // TODO: Fix initial rendering
   while (true) {
     unsigned short y_pos = 0;
     unsigned short index = 0;
+    string regex_parse_error;
+
     werase(package_window);
-    for_each(pkgs.begin(), pkgs.end(), [&y_pos, &index, &max_length](PACKAGE &package) {
+
+    // Searching
+    try {
+      regex search_regex (search_string);
+      filtered_packages.clear();
+      copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
+        return regex_search(package.name, search_regex);
+      });
+    } catch(const regex_error &e) {
+      regex_parse_error = e.what();
+    }
+    const unsigned short number_of_filtered_packages = (USHORT) filtered_packages.size();
+    const size_t package_number_width = number_width(package_size);
+
+    if (selected_package > number_of_filtered_packages - 1) {
+      selected_package = number_of_filtered_packages - 1;
+
+      if (number_of_filtered_packages < LIST_HEIGHT) {
+        start_packages = 0;
+      }
+    }
+
+    for_each(filtered_packages.begin(), filtered_packages.end(), [&y_pos, &index, &max_length](PACKAGE &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
       if (index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
@@ -127,18 +162,25 @@ int main(int argc, const char *argv[])
       ++index;
     });
 
-    // Handle scrolling of packages
+    if (search_mode) {
+      mvprintw(LAST_LINE, 0, "/%s", search_string.c_str());
+    } else {
+      move(LAST_LINE, 0);
+      clrtoeol();
+    }
+
+    // Package scrolling
     if (selected_package == 0) {
       start_packages = 0;
-    } else if (selected_package == number_of_packages - 1) {
-      start_packages = number_of_packages - LIST_HEIGHT;
+    } else if (selected_package == number_of_filtered_packages - 1) {
+      start_packages = max(number_of_filtered_packages - LIST_HEIGHT, 0);
     } else if (selected_package >= LIST_HEIGHT + start_packages) {
       ++start_packages;
     } else if (selected_package < start_packages) {
       --start_packages;
     }
 
-    // Handle scrolling of versions
+    // Version scrolling
     const unsigned short number_of_versions = max(LIST_HEIGHT, (USHORT) versions.size());
 
     if (selected_version <= 0) {
@@ -151,49 +193,97 @@ int main(int argc, const char *argv[])
       --start_versions;
     }
 
-    debug("Refresh... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
+    // Refresh windows
+    debug("Refresh p... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
     prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS);
     if (version_window) {
-      debug("Refresh... %d - %d | %d\n", selected_version, LIST_HEIGHT, start_versions);
+      debug("Refresh v... %d - %d | %d\n", selected_version, LIST_HEIGHT, start_versions);
       prefresh(version_window, start_versions, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
     }
 
+    // Render bottom bar
     attron(COLOR_PAIR(COLOR_INFO_BAR));
-    mvprintw(LIST_HEIGHT, 0, " %*d/%-*d", package_number_width, selected_package + 1, COLS - 2 * package_number_width, package_size);
+    // Clear and set background on the entire line
+    mvprintw(LIST_HEIGHT, 0, "%*s", COLS, "");
+
+    if (regex_parse_error.length() > 0) {
+      mvprintw(LIST_HEIGHT, 0, " %s", regex_parse_error.c_str());
+    } else if (filtered_packages.size() == 0) {
+      mvprintw(LIST_HEIGHT, 0, " No matches");
+    } else {
+      if (search_string.length() > 0 ) {
+        mvprintw(LIST_HEIGHT, 0, " %*d/%-*d (%d)", package_number_width, selected_package + 1, package_number_width, filtered_packages.size(), pkgs.size());
+      } else {
+        mvprintw(LIST_HEIGHT, 0, " %*d/%-*d", package_number_width, selected_package + 1, package_number_width, filtered_packages.size());
+      }
+    }
+
     if (version_window) {
       const unsigned short version_number_width = number_width(versions.size());
       mvprintw(LIST_HEIGHT, COLS / 2, "  %*d/%d", version_number_width, selected_version + 1, versions.size());
     }
     attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
-    move(LINES - 1, 0); // Move cursor to make `npm install` render here
+    // Move to last line to make `npm install` render here
+    move(LAST_LINE, 0);
 
-    const unsigned int character = wgetch(stdscr);
+    const unsigned char character = wgetch(stdscr);
 
-    if (version_window) {
-      debug("Sending key '%c' to version window\n", character);
+    if (search_mode) {
+      debug("Sending key '%c' (%#x) to search\n", character, character);
+      switch (character) {
+          case KEY_ESC:
+            search_mode = false;
+            search_string = "";
+            break;
+          case '\n':
+            search_mode = false;
+            break;
+          case KEY_DELETE:
+          case KEY_BACKSPACE:
+          case '\b': {
+          const short last_character = search_string.length() - 1;
+
+          if (last_character >= 0) {
+            search_string.erase(last_character, 1);
+            move(LAST_LINE, last_character);
+            clrtoeol();
+          } else {
+            search_mode = false;
+          }
+          break;
+       }
+       default:
+          if (is_printable(character)) {
+            search_string += character;
+          }
+      }
+      mvprintw(LAST_LINE, 0, search_string.c_str());
+      debug("Searching for \"%s\"\n", search_string.c_str());
+    } else if (version_window) {
+      debug("Sending key '%c' (%#x) to version window\n", character, character);
       switch (character) {
         case KEY_DOWN:
         case 'J':
           // TODO: refresh package list first
-          selected_package = (selected_package + 1) % pkgs.size();
-          get_versions(pkgs.at(selected_package));
+          selected_package = (selected_package + 1) % filtered_packages.size();
+          get_versions(filtered_packages.at(selected_package));
           start_versions = 0;
           break;
         case KEY_UP:
         case 'K':
           // TODO: refresh package list first
-          selected_package = (selected_package - 1 + pkgs.size()) % pkgs.size();
-          get_versions(pkgs.at(selected_package));
+          selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
+          get_versions(filtered_packages.at(selected_package));
           start_versions = 0;
           break;
         case 'j':
           selected_version = min(selected_version + 1, (int) versions.size() - 1);
-          print_versions(pkgs.at(selected_package));
+          print_versions(filtered_packages.at(selected_package));
           break;
         case 'k':
           selected_version = max(selected_version - 1, 0);
-          print_versions(pkgs.at(selected_package));
+          print_versions(filtered_packages.at(selected_package));
           break;
         case 'q':
           wclear(version_window);
@@ -204,33 +294,34 @@ int main(int argc, const char *argv[])
           return exit();
         case '\n':
           // TODO: Add confirm?
-          install_package(pkgs.at(selected_package), versions.at(selected_version));
+          install_package(filtered_packages.at(selected_package), versions.at(selected_version));
           break;
         case 'g':
           selected_version = 0;
-          print_versions(pkgs.at(selected_package));
+          print_versions(filtered_packages.at(selected_package));
           break;
         case 'G':
           selected_version = number_of_versions - 1;
-          print_versions(pkgs.at(selected_package));
+          print_versions(filtered_packages.at(selected_package));
           break;
       }
-    } else {
-      debug("Sending key '%c' to main window\n", character);
+    } else { // Package window
+      debug("Sending key '%c' (%#x) to main window\n", character, character);
       switch (character) {
         case KEY_DOWN:
         case 'j':
         case 'J':
-          selected_package = (selected_package + 1) % pkgs.size();
+          selected_package = (selected_package + 1) % filtered_packages.size();
           break;
         case KEY_UP:
         case 'k':
         case 'K':
-          selected_package = (selected_package - 1 + pkgs.size()) % pkgs.size();
+          selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
           break;
           break;
         case '\n':
-          get_versions(pkgs.at(selected_package));
+          // TODO: Bounds check?
+          get_versions(filtered_packages.at(selected_package));
           break;
         case 'q':
         case 'Q':
@@ -241,12 +332,16 @@ int main(int argc, const char *argv[])
         case 'G':
           selected_package = number_of_packages - 1;
           break;
+        case '/':
+          search_mode = true;
+          break;
       }
     }
   }
 }
 
-vector<string> split_string(string package_string) {
+vector<string> split_string(string package_string)
+{
   char buffer[1024];
   vector<string> result = vector<string>();
 
@@ -261,7 +356,6 @@ vector<string> split_string(string package_string) {
   return result;
 }
 
-// Parse package name and version
 void read_packages(MAX_LENGTH *max_length)
 {
   debug("read_packages\n");
@@ -288,7 +382,6 @@ void read_packages(MAX_LENGTH *max_length)
     }
   });
 }
-
 
 void get_versions(PACKAGE package)
 {
@@ -343,19 +436,23 @@ void install_package(PACKAGE package, const string new_version)
 {
   char command[1024];
   snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
-  move(LIST_HEIGHT, 0);
-  sync_shell_command(command, [](char* line) {
-    wprintw(version_window, "%s\n", line);
+  int exit_code = sync_shell_command(command, [](char* line) {
+    debug("NPM INSTALL: %s\n", line);
   });
 
   hide_cursor();
 
-  read_packages(NULL);
-  selected_version = -1;
-  print_versions(pkgs.at(selected_package));
+  if (exit_code == OK) {
+    read_packages(NULL);
+    selected_version = -1;
+    PACKAGE p = filtered_packages.at(selected_package);
+    p.version = new_version;
+    print_versions(p);
+  } else {
+    // TODO: Handle error
+  }
 }
 
-// Print versions
 void print_versions(PACKAGE package)
 {
   string package_version = package.version;
@@ -378,7 +475,6 @@ void print_versions(PACKAGE package)
       wattron(version_window, A_STANDOUT);
     }
     wprintw(version_window," %s \n", version.c_str());
-    /* debug(" %s \n", version.c_str()); */
     if (version == package_version) {
       wattroff(version_window, A_STANDOUT);
       wattron(version_window, COLOR_PAIR(COLOR_OLD_VERSION));
@@ -388,7 +484,6 @@ void print_versions(PACKAGE package)
   });
 }
 
-// Shell command
 vector<string> shell_command(const string command)
 {
   vector<string> result;
@@ -407,8 +502,7 @@ vector<string> shell_command(const string command)
   return result;
 }
 
-// Sync shell command
-void sync_shell_command(const string command, std::function<void(char*)> callback)
+int sync_shell_command(const string command, std::function<void(char*)> callback)
 {
   char buffer[1024];
   FILE *output = popen(command.c_str(), "r");
@@ -420,7 +514,7 @@ void sync_shell_command(const string command, std::function<void(char*)> callbac
     callback(buffer);
   }
 
-  pclose(output);
+  return pclose(output);
 }
 
 const unsigned short number_width(unsigned short number)
@@ -436,7 +530,11 @@ const unsigned short number_width(unsigned short number)
   return i;
 }
 
-// Hide cursor
+bool is_printable(char character)
+{
+  return character >= 0x20 && character < 0x7F;
+}
+
 void hide_cursor()
 {
   curs_set(1); // Explicitly show it to avoid rendering bug after `npm install`
