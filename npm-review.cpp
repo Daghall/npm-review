@@ -83,13 +83,9 @@ int main(int argc, const char *argv[])
   bool search_mode = false;
   string search_string = "";
 
-  // TODO: Fix initial rendering
   while (true) {
-    unsigned short y_pos = 0;
-    unsigned short index = 0;
+    unsigned short package_index = 0;
     string regex_parse_error;
-
-    werase(package_window);
 
     // Searching
     try {
@@ -112,14 +108,15 @@ int main(int argc, const char *argv[])
       }
     }
 
-    for_each(filtered_packages.begin(), filtered_packages.end(), [&y_pos, &index, &max_length](PACKAGE &package) {
+    werase(package_window);
+
+    for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
-      if (index == selected_package) {
+      if (package_index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
       }
       wprintw(package_window, " %-*s  %-*s%s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), package.is_dev ? "  (DEV)" : "");
-      ++y_pos;
-      ++index;
+      ++package_index;
     });
 
     if (search_mode) {
@@ -187,7 +184,7 @@ int main(int argc, const char *argv[])
     // Move to last line to make `npm install` render here
     move(LAST_LINE, 0);
 
-    const unsigned char character = wgetch(stdscr);
+    const short character = wgetch(stdscr);
 
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
@@ -268,6 +265,9 @@ int main(int argc, const char *argv[])
     } else { // Package window
       debug("Sending key '%c' (%#x) to main window\n", character, character);
       switch (character) {
+        case ERR:
+          nodelay(stdscr, false); // Make `wgetch` block
+          break;
         case KEY_DOWN:
         case 'j':
         case 'J':
@@ -308,6 +308,7 @@ void initialize() {
   use_default_colors();
   assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
   noecho();
+  nodelay(stdscr, true);
   hide_cursor();
 
   init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
