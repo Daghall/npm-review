@@ -12,35 +12,9 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include "npm-review.h"
 
 using namespace std;
-
-// Types
-typedef struct {
-  string name;
-  string version;
-  bool is_dev;
-} PACKAGE;
-
-typedef struct {
-  unsigned short name;
-  unsigned short version;
-} MAX_LENGTH;
-
-typedef unsigned short USHORT;
-
-// Functions
-void read_packages(MAX_LENGTH *foo);
-vector<string> split_string(string package_string);
-vector<string> shell_command(const string);
-void print_versions(PACKAGE package);
-void get_versions(PACKAGE package);
-int sync_shell_command(const string command, std::function<void(char*)> callback);
-void install_package(PACKAGE package, const string new_version);
-const unsigned short number_width(unsigned short number_of_packages);
-bool is_printable(char character);
-void hide_cursor();
-int exit();
 
 // Debugging
 FILE *debug_log = NULL;
@@ -87,21 +61,7 @@ int main(int argc, const char *argv[])
     }
   }
 
-  // TODO: Break out initialization to its own function
-  debug("Init\n");
-  initscr();
-  keypad(stdscr, true);
-  start_color();
-  use_default_colors();
-  assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
-  noecho();
-  hide_cursor();
-
-  init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
-  init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
-  init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_DEFAULT);
-  init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
-  init_pair(COLOR_INFO_BAR, COLOR_BLACK, COLOR_BLUE);
+  initialize();
 
   MAX_LENGTH max_length;
   max_length.name = 0;
@@ -338,6 +298,23 @@ int main(int argc, const char *argv[])
       }
     }
   }
+}
+
+void initialize() {
+  debug("Init\n");
+  initscr();
+  keypad(stdscr, true);
+  start_color();
+  use_default_colors();
+  assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
+  noecho();
+  hide_cursor();
+
+  init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
+  init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
+  init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_DEFAULT);
+  init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
+  init_pair(COLOR_INFO_BAR, COLOR_BLACK, COLOR_BLUE);
 }
 
 vector<string> split_string(string package_string)
