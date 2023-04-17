@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <signal.h>
 #include <functional>
 #include <iterator>
 #include <iterator>
@@ -27,6 +28,7 @@ bool fake_versions = false;
 // Constants
 #define LIST_HEIGHT   (USHORT)(LINES - BOTTOM_BAR_HEIGHT)
 #define LAST_LINE     (USHORT)(LINES - 1)
+#define ctrl(c)       (c & 0x1f)
 
 const unsigned short COLOR_DEFAULT = -1;
 const unsigned short COLOR_SELECTED_PACKAGE = 1;
@@ -70,7 +72,6 @@ int main(int argc, const char *argv[])
   read_packages(&max_length);
 
   // TODO: Handle resize
-  // TODO: Signals and/or ctrl-c/ctrl-d
   // TODO: Sorting?
   // TODO: Cache versions?
   const unsigned short package_size = (short) pkgs.size();
@@ -184,21 +185,25 @@ int main(int argc, const char *argv[])
     // Move to last line to make `npm install` render here
     move(LAST_LINE, 0);
 
-    const short character = wgetch(stdscr);
+    const short character = getch();
 
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
       switch (character) {
-          case KEY_ESC:
-            search_mode = false;
-            search_string = "";
-            break;
-          case '\n':
-            search_mode = false;
-            break;
-          case KEY_DELETE:
-          case KEY_BACKSPACE:
-          case '\b': {
+        case ctrl('c'):
+        case KEY_ESC:
+          search_mode = false;
+          search_string = "";
+          break;
+        case ctrl('z'):
+          search_mode = false;
+          raise(SIGTSTP);
+        case '\n':
+          search_mode = false;
+          break;
+        case KEY_DELETE:
+        case KEY_BACKSPACE:
+        case '\b': {
           const short last_character = search_string.length() - 1;
 
           if (last_character >= 0) {
@@ -209,8 +214,8 @@ int main(int argc, const char *argv[])
             search_mode = false;
           }
           break;
-       }
-       default:
+        }
+        default:
           if (is_printable(character)) {
             search_string += character;
           }
@@ -218,18 +223,19 @@ int main(int argc, const char *argv[])
       mvprintw(LAST_LINE, 0, search_string.c_str());
       debug("Searching for \"%s\"\n", search_string.c_str());
     } else if (version_window) {
-      debug("Sending key '%c' (%#x) to version window\n", character, character);
+      debug("Sending key '%d' (%#x) to version window\n", character, character);
       switch (character) {
+        case ctrl('z'):
+          raise(SIGTSTP);
+          break;
         case KEY_DOWN:
         case 'J':
-          // TODO: refresh package list first
           selected_package = (selected_package + 1) % filtered_packages.size();
           get_versions(filtered_packages.at(selected_package));
           start_versions = 0;
           break;
         case KEY_UP:
         case 'K':
-          // TODO: refresh package list first
           selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
           get_versions(filtered_packages.at(selected_package));
           start_versions = 0;
@@ -247,6 +253,7 @@ int main(int argc, const char *argv[])
           delwin(version_window);
           version_window = NULL;
           break;
+        case ctrl('c'):
         case 'Q':
           return exit();
         case '\n':
@@ -266,7 +273,10 @@ int main(int argc, const char *argv[])
       debug("Sending key '%c' (%#x) to main window\n", character, character);
       switch (character) {
         case ERR:
-          nodelay(stdscr, false); // Make `wgetch` block
+          nodelay(stdscr, false); // Make `getch` block
+          break;
+        case ctrl('z'):
+          raise(SIGTSTP);
           break;
         case KEY_DOWN:
         case 'j':
@@ -283,6 +293,7 @@ int main(int argc, const char *argv[])
           // TODO: Bounds check?
           get_versions(filtered_packages.at(selected_package));
           break;
+        case ctrl('c'):
         case 'q':
         case 'Q':
           return exit();
@@ -303,12 +314,14 @@ int main(int argc, const char *argv[])
 void initialize() {
   debug("Init\n");
   initscr();
-  keypad(stdscr, true);
+  keypad(stdscr, true);   // Activate extend keyboard detection
+  ESCDELAY = 0;           // Remove delay of ESC, since no escape sequences are expected
+  raw();                  // Handle signals manually, via `getch`
+  noecho();               // Do not echo key-presses
+  nodelay(stdscr, true);  // Make `getch` non-blocking
   start_color();
   use_default_colors();
   assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
-  noecho();
-  nodelay(stdscr, true);
   hide_cursor();
 
   init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
