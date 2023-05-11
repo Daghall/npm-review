@@ -17,6 +17,7 @@ The active window is the _version_ window, if it is displayed, _package_ window 
 |     q | Close the active window (exit if in _package_ window) |
 |     Q | Exit |
 | Enter | Open _version_ window, or `npm install` selected version |
+|     D | `npm uninstall` selected package |
 |     g | Move to the first item in the active window |
 |     G | Move to the last item in the active window |
 |     / | Start regex filtering in the _package_ window |
@@ -47,7 +48,7 @@ make install
 to install the binary under `/usr/local/bin`.
 
 
-Now nacigate to a directory containing a `package.json` and run
+Now navigate to a directory containing a `package.json` and run
 
 ```
 npm-review

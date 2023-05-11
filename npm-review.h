@@ -25,6 +25,7 @@ void print_versions(PACKAGE package);
 void get_versions(PACKAGE package);
 int sync_shell_command(const string command, std::function<void(char*)> callback);
 void install_package(PACKAGE package, const string new_version);
+void uninstall_package(PACKAGE package);
 const unsigned short number_width(unsigned short number_of_packages);
 bool is_printable(char character);
 void hide_cursor();

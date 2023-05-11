@@ -74,6 +74,8 @@ int main(int argc, const char *argv[])
   // TODO: Handle resize
   // TODO: Sorting?
   // TODO: Cache versions?
+  // TODO: `npm info %s` on key press of `i`
+  // TODO: Show dependencies on key press of `I`?
   const unsigned short package_size = (short) pkgs.size();
   const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, COLS);
@@ -83,6 +85,7 @@ int main(int argc, const char *argv[])
   unsigned short start_versions = 0;
   bool search_mode = false;
   string search_string = "";
+  string message_string = "";
 
   while (true) {
     unsigned short package_index = 0;
@@ -98,6 +101,7 @@ int main(int argc, const char *argv[])
     } catch(const regex_error &e) {
       regex_parse_error = e.what();
     }
+
     const unsigned short number_of_filtered_packages = (USHORT) filtered_packages.size();
     const size_t package_number_width = number_width(package_size);
 
@@ -111,6 +115,7 @@ int main(int argc, const char *argv[])
 
     werase(package_window);
 
+    // Render packages
     for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
       if (package_index == selected_package) {
@@ -125,6 +130,7 @@ int main(int argc, const char *argv[])
     } else {
       move(LAST_LINE, 0);
       clrtoeol();
+      mvprintw(LAST_LINE, 0, "%s", message_string.c_str());
     }
 
     // Package scrolling
@@ -187,6 +193,8 @@ int main(int argc, const char *argv[])
 
     const short character = getch();
 
+    message_string = "";
+
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
       switch (character) {
@@ -228,6 +236,7 @@ int main(int argc, const char *argv[])
         case ctrl('z'):
           raise(SIGTSTP);
           break;
+        // TODO: Bail if no packages, or exit?
         case KEY_DOWN:
         case 'J':
           selected_package = (selected_package + 1) % filtered_packages.size();
@@ -293,6 +302,13 @@ int main(int argc, const char *argv[])
           // TODO: Bounds check?
           get_versions(filtered_packages.at(selected_package));
           break;
+        case 'D': {
+          // TODO: Add confirm
+          PACKAGE package = filtered_packages.at(selected_package);
+          message_string = "Uninstalled " + package.name;
+          uninstall_package(package);
+          break;
+        }
         case ctrl('c'):
         case 'q':
         case 'Q':
@@ -444,6 +460,23 @@ void install_package(PACKAGE package, const string new_version)
   }
 }
 
+void uninstall_package(PACKAGE package)
+{
+  char command[1024];
+  snprintf(command, 1024, "npm uninstall %s --silent", package.name.c_str());
+  int exit_code = sync_shell_command(command, [](char* line) {
+    debug("NPM UNINSTALL: %s\n", line);
+  });
+
+  hide_cursor();
+
+  if (exit_code == OK) {
+    read_packages(NULL);
+  } else {
+    // TODO: Handle error
+  }
+}
+
 void print_versions(PACKAGE package)
 {
   string package_version = package.version;
@@ -528,7 +561,7 @@ bool is_printable(char character)
 
 void hide_cursor()
 {
-  curs_set(1); // Explicitly show it to avoid rendering bug after `npm install`
+  curs_set(1); // Explicitly show it to avoid rendering bug after `npm {un,}install`
   curs_set(0);
 }
 
