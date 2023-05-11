@@ -366,7 +366,7 @@ vector<string> split_string(string package_string)
 void read_packages(MAX_LENGTH *max_length)
 {
   debug("read_packages\n");
-  string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r < package.json; done";
+  string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r 2> /dev/null < package.json; done";
   vector<string> packages = shell_command(command);
   pkgs.clear();
 
