@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdarg>
 #include <cstddef>
@@ -74,7 +75,6 @@ int main(int argc, const char *argv[])
   unsigned short start_versions = 0;
   bool search_mode = false;
   string search_string = "";
-  string message_string = "";
 
   while (true) {
     unsigned short package_index = 0;
@@ -177,8 +177,6 @@ int main(int argc, const char *argv[])
     }
 
     const short character = getch();
-
-    message_string = "";
 
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
@@ -294,9 +292,8 @@ int main(int argc, const char *argv[])
           get_versions(filtered_packages.at(selected_package));
           break;
         case 'D': {
-          // TODO: Add confirm
+          // TODO: Bounds check?
           PACKAGE package = filtered_packages.at(selected_package);
-          message_string = "Uninstalled " + package.name;
           uninstall_package(package);
           break;
         }
@@ -435,6 +432,9 @@ void get_versions(PACKAGE package)
 
 void install_package(PACKAGE package, const string new_version)
 {
+  // Move to last line to make `npm install` render here
+  move(LAST_LINE, 0);
+
   char command[1024];
   snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
   int exit_code = sync_shell_command(command, [](char* line) {
@@ -451,12 +451,18 @@ void install_package(PACKAGE package, const string new_version)
     print_versions(p);
   } else {
     // TODO: Handle error
+    debug("Install failed\n");
   }
 }
 
 void uninstall_package(PACKAGE package)
 {
+  if (!confirm("Uninstall " + package.name + "?")) {
+    return;
+  }
+
   char command[1024];
+
   snprintf(command, 1024, "npm uninstall %s --silent", package.name.c_str());
   int exit_code = sync_shell_command(command, [](char* line) {
     debug("NPM UNINSTALL: %s\n", line);
@@ -465,9 +471,12 @@ void uninstall_package(PACKAGE package)
   hide_cursor();
 
   if (exit_code == OK) {
+    debug("Package uninstalled\n");
+    show_message("Uninstalled " + package.name);
     read_packages(NULL);
   } else {
     // TODO: Handle error
+    debug("Uninstall failed\n");
   }
 }
 
@@ -496,12 +505,21 @@ void clear_message()
 
 bool confirm(string message)
 {
-  show_message(message + " [y/n]", COLOR_PACKAGE);
+  clear_message();
+  string confirm_message = message + " [y/n]";
+  show_message(confirm_message, COLOR_PACKAGE);
+  move(LAST_LINE, confirm_message.length());
+  show_cursor();
+
   const short answer = getch();
+
+  clear_message();
+  hide_cursor();
 
   if (tolower(answer) == 'y') {
     return true;
   }
+
   return false;
 }
 
