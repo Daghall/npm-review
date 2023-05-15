@@ -2,6 +2,18 @@
 
 using namespace std;
 
+// Consants
+const unsigned short COLOR_DEFAULT = -1;
+const unsigned short COLOR_SELECTED_PACKAGE = 1;
+const unsigned short COLOR_PACKAGE = 2;
+const unsigned short COLOR_OLD_VERSION = 3;
+const unsigned short COLOR_CURRENT_VERSION = 4;
+const unsigned short COLOR_INFO_BAR = 5;
+
+const unsigned short BOTTOM_BAR_HEIGHT = 2;
+const unsigned short KEY_ESC = 0x1B;
+const unsigned short KEY_DELETE = 0x7F;
+
 // Types
 typedef struct {
   string name;
@@ -26,7 +38,12 @@ void get_versions(PACKAGE package);
 int sync_shell_command(const string command, std::function<void(char*)> callback);
 void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);
+bool confirm(string message);
+void show_message(string message, const USHORT color = COLOR_DEFAULT);
+void show_searchsting(string search_string);
+void clear_message();
 const unsigned short number_width(unsigned short number_of_packages);
 bool is_printable(char character);
+void show_cursor();
 void hide_cursor();
 int exit();

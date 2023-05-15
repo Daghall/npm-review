@@ -30,17 +30,6 @@ bool fake_versions = false;
 #define LAST_LINE     (USHORT)(LINES - 1)
 #define ctrl(c)       (c & 0x1f)
 
-const unsigned short COLOR_DEFAULT = -1;
-const unsigned short COLOR_SELECTED_PACKAGE = 1;
-const unsigned short COLOR_PACKAGE = 2;
-const unsigned short COLOR_OLD_VERSION = 3;
-const unsigned short COLOR_CURRENT_VERSION = 4;
-const unsigned short COLOR_INFO_BAR = 5;
-
-const unsigned short BOTTOM_BAR_HEIGHT = 2;
-const unsigned short KEY_ESC = 0x1B;
-const unsigned short KEY_DELETE = 0x7F;
-
 // Global variables
 WINDOW *version_window = NULL;
 WINDOW *package_window = NULL;
@@ -125,14 +114,6 @@ int main(int argc, const char *argv[])
       ++package_index;
     });
 
-    if (search_mode) {
-      mvprintw(LAST_LINE, 0, "/%s", search_string.c_str());
-    } else {
-      move(LAST_LINE, 0);
-      clrtoeol();
-      mvprintw(LAST_LINE, 0, "%s", message_string.c_str());
-    }
-
     // Package scrolling
     if (selected_package == 0) {
       start_packages = 0;
@@ -188,8 +169,12 @@ int main(int argc, const char *argv[])
     }
     attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
-    // Move to last line to make `npm install` render here
-    move(LAST_LINE, 0);
+    if (search_mode) {
+      move(LAST_LINE, search_string.length() + 1);
+    } else {
+      // Move to last line to make `npm install` render here
+      move(LAST_LINE, 0);
+    }
 
     const short character = getch();
 
@@ -202,12 +187,16 @@ int main(int argc, const char *argv[])
         case KEY_ESC:
           search_mode = false;
           search_string = "";
+          clear_message();
+          hide_cursor();
           break;
         case ctrl('z'):
           search_mode = false;
+          hide_cursor();
           raise(SIGTSTP);
         case '\n':
           search_mode = false;
+          hide_cursor();
           break;
         case KEY_DELETE:
         case KEY_BACKSPACE:
@@ -216,19 +205,21 @@ int main(int argc, const char *argv[])
 
           if (last_character >= 0) {
             search_string.erase(last_character, 1);
-            move(LAST_LINE, last_character);
-            clrtoeol();
+            clear_message();
+            show_searchsting(search_string);
           } else {
             search_mode = false;
+            clear_message();
+            hide_cursor();
           }
           break;
         }
         default:
           if (is_printable(character)) {
             search_string += character;
+            show_searchsting(search_string);
           }
       }
-      mvprintw(LAST_LINE, 0, search_string.c_str());
       debug("Searching for \"%s\"\n", search_string.c_str());
     } else if (version_window) {
       debug("Sending key '%d' (%#x) to version window\n", character, character);
@@ -321,6 +312,9 @@ int main(int argc, const char *argv[])
           break;
         case '/':
           search_mode = true;
+          clear_message();
+          show_searchsting(search_string);
+          show_cursor();
           break;
       }
     }
@@ -477,6 +471,40 @@ void uninstall_package(PACKAGE package)
   }
 }
 
+void show_message(string message, const USHORT color)
+{
+  debug("Showing message: \"%s\", color: %d\n", message.c_str(), color);
+  if (color != COLOR_DEFAULT) {
+    attron(COLOR_PAIR(color));
+  }
+  mvprintw(LAST_LINE, 0, "%s", message.c_str());
+  if (color != COLOR_DEFAULT) {
+    attroff(COLOR_PAIR(color));
+  }
+}
+
+void show_searchsting(string search_string)
+{
+  show_message("/" + search_string);
+}
+
+void clear_message()
+{
+  move(LAST_LINE, 0);
+  clrtoeol();
+}
+
+bool confirm(string message)
+{
+  show_message(message + " [y/n]", COLOR_PACKAGE);
+  const short answer = getch();
+
+  if (tolower(answer) == 'y') {
+    return true;
+  }
+  return false;
+}
+
 void print_versions(PACKAGE package)
 {
   string package_version = package.version;
@@ -559,9 +587,14 @@ bool is_printable(char character)
   return character >= 0x20 && character < 0x7F;
 }
 
+void show_cursor()
+{
+  curs_set(1);
+}
+
 void hide_cursor()
 {
-  curs_set(1); // Explicitly show it to avoid rendering bug after `npm {un,}install`
+  show_cursor(); // Explicitly show it to avoid rendering bug after `npm {un,}install`
   curs_set(0);
 }
 
