@@ -1,4 +1,5 @@
 node_modules/
+build/
 log
 package*.json
 npm-review

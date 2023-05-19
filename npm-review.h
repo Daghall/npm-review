@@ -28,13 +28,24 @@ typedef struct {
 
 typedef unsigned short USHORT;
 
+enum alternate_modes {
+  VERSION,
+  DEPENDENCIES,
+  INFO,
+};
+
+#define STR(x) #x
+
 // Functions
 void initialize();
 void read_packages(MAX_LENGTH *foo);
 vector<string> split_string(string package_string);
 vector<string> shell_command(const string);
-void print_versions(PACKAGE package);
+void print_alternate(PACKAGE package);
 void get_versions(PACKAGE package);
+void get_dependencies(PACKAGE package, bool hide_sub_dependencies = false);
+void get_info(PACKAGE package);
+void change_alternate_window();
 int sync_shell_command(const string command, std::function<void(char*)> callback);
 void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);
@@ -43,6 +54,7 @@ void show_message(string message, const USHORT color = COLOR_DEFAULT);
 void show_searchsting(string search_string);
 void clear_message();
 const unsigned short number_width(unsigned short number_of_packages);
+string escape_slashes(string str);
 bool is_printable(char character);
 void show_cursor();
 void hide_cursor();

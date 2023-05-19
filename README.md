@@ -1,31 +1,69 @@
 # NPM review
 
-[ncurses](https://en.wikipedia.org/wiki/Ncurses)-based [TUI](https://en.wikipedia.org/wiki/Text-based_user_interface) for reviewing and upgrading/downgrading NPM packages, with vim-like key-bindings.
+[ncurses](https://en.wikipedia.org/wiki/Ncurses)-based [TUI](https://en.wikipedia.org/wiki/Text-based_user_interface) for reviewing and upgrading/downgrading NPM packages, viewing package info, and dependencies, with vim-like key-bindings.
 
 Heavily inspired by [tig](https://github.com/jonas/tig).
 
+
 ## Key-bindings
 
-The active window is the _version_ window, if it is displayed, _package_ window otherwise.
+The active window is the _alternate_ window, if it is displayed, _package_ window otherwise.
 
 | Key   | Command |
 | ----- | ------- |
-|     j | Move cursor down in the active window |
-|     k | Move cursor up in the active window |
-|     J | Move cursor down in the _package_ window |
-|     K | Move cursor up in the _package_ window |
-|     q | Close the active window (exit if in _package_ window) |
-|     Q | Exit |
-| Enter | Open _version_ window, or `npm install` selected version |
-|     D | `npm uninstall` selected package |
-|     g | Move to the first item in the active window |
-|     G | Move to the last item in the active window |
-|     / | Start regex filtering in the _package_ window |
+|      `j`  | Move cursor down in the active window |
+|      `k`  | Move cursor up in the active window |
+| `J` or ⬇️  | Move cursor down in the _package_ window |
+| `K` or ⬆️  | Move cursor up in the _package_ window |
+|      `q`  | Close the active window (exit if in _package_ window) |
+|      `Q`  | Exit |
+|  ` Enter` | Show versions, or `npm install` selected version |
+|      `D`  | `npm uninstall` selected package |
+|      `i`  | `npm info` selected package |
+|      `I`  | Show dependencies for selected package |
+|      `l`  | Show more of dependencies |
+|      `h`  | Show less of dependencies |
+|      `g`  | Move to the first item in the active window |
+|      `G`  | Move to the last item in the active window |
+|      `/`  | Start regex filtering in the _package_ window |
+
+
+## Searching
+
+To start regex filtering, hit `/` and start typing.
+
+Pressing `Enter`  exits search mode, keeping the filtering.
+
+Press `Esc` or `ctrl-c` to clear pattern and exit search mode.
+
+
+## Alternate window
+
+The active window is the package window, unless one of the alternate views is open. The alternate view can be scrolled with `j` and `k`, respectively.
+
+There are threw alternate views:
+
+### Versions (`Enter`)
+
+Lists versions, highlighting the currently installed.
+
+Installation of another version can be done by selecting it (`j`/`k` and hitting `Enter`.)
+
+### Info (`i`)
+
+Shows basic information about the package.
+
+### Dependencies (`I`/`l`)
+
+Shows a tree view of a package's dependencies. By default only the direct dependencies are shown. To show the full tree, hit `l`. Show less with `h`.
 
 ## Prerequisites
 
+The data being fetched is processed with external programs, that needs to be installed in order for the program to work propely:
+
   - [jq](https://github.com/stedolan/jq)
-  - [ncurses](https://en.wikipedia.org/wiki/Ncurses)
+  - [gawk](https://www.gnu.org/software/gawk/)
+  - [ncurses](https://en.wikipedia.org/wiki/Ncurses) (for building)
 
 ## Installation
 
@@ -34,12 +72,12 @@ Only developed/tested on macOS.
 ### Install dependencies
 These may be installed with [homebrew](https://github.com/Homebrew/brew):
 ```
-brew install ncurses jq
+brew install ncurses jq gawk
 ```
 
 ### Install `npm-review`
 
-Git clone this repo and run
+Git clone this repo and run:
 
 ```
 make install
@@ -61,7 +99,7 @@ npm-review
 
 ## Development
 
-There are to flags that can be helpful when developing:
+There are two flags that can be helpful when developing:
 
   - `-d` – Activates debug-mode that writes log messages to `./log`
-  - `-f` – Fakes the version window data, making offline development easier
+  - `-f` – Fakes the HTTP request data, making offline development easier
