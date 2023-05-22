@@ -50,6 +50,7 @@ vector<string> alternate_rows;
 unsigned short selected_package = 0;
 short selected_alternate_row = 0;
 enum alternate_modes alternate_mode;
+bool show_sub_dependencies = false;
 
 int main(int argc, const char *argv[])
 {
@@ -263,22 +264,24 @@ int main(int argc, const char *argv[])
           break;
         case 'h':
           if (alternate_mode == DEPENDENCIES) {
-            // TODO: Remember choice
-            // TODO: Remember selected dependency?
-            get_dependencies(filtered_packages.at(selected_package), true);
+            if (show_sub_dependencies) {
+              show_sub_dependencies = false;
+              // TODO: Remember selected dependency?
+              get_dependencies(filtered_packages.at(selected_package));
+            } else {
+              close_alternate_window();
+            }
           }
           break;
         case 'l':
           if (alternate_mode == DEPENDENCIES) {
-            // TODO: Remember choice
+            show_sub_dependencies = true;
             // TODO: Remember selected dependency?
-            get_dependencies(filtered_packages.at(selected_package), false);
+            get_dependencies(filtered_packages.at(selected_package));
           }
           break;
         case 'q':
-          wclear(alternate_window);
-          delwin(alternate_window);
-          alternate_window = NULL;
+          close_alternate_window();
           break;
         case ctrl('c'):
         case 'Q':
@@ -326,7 +329,7 @@ int main(int argc, const char *argv[])
         case 'l':
           // TODO: Bounds check?
           alternate_mode = DEPENDENCIES;
-          get_dependencies(filtered_packages.at(selected_package), true);
+          get_dependencies(filtered_packages.at(selected_package));
           break;
         case '\n':
           // TODO: Bounds check?
@@ -476,16 +479,16 @@ void get_versions(PACKAGE package)
   print_alternate(package);
 }
 
-void get_dependencies(PACKAGE package, bool hide_sub_dependencies)
+void get_dependencies(PACKAGE package)
 {
   // TODO: Add loading screen
   string package_name = escape_slashes(package.name);
   char command[1024];
-  snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), hide_sub_dependencies ? "[│ ] " : "^$");
+  snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), show_sub_dependencies ? "^$" : "[│ ] ");
 
   if (fake_http_requests) { // {{{1
     alternate_rows.clear();
-    if (hide_sub_dependencies) {
+    if (!show_sub_dependencies) {
       alternate_rows.push_back("┬ express-handlebars    5.3.5");
       alternate_rows.push_back("├─┬ glob                7.2.0");
       alternate_rows.push_back("├── graceful-fs         4.2.10");
@@ -630,6 +633,12 @@ void clear_message()
   clrtoeol();
 }
 
+void close_alternate_window() {
+  wclear(alternate_window);
+  delwin(alternate_window);
+  alternate_window = NULL;
+}
+
 bool confirm(string message)
 {
   clear_message();
@@ -689,7 +698,7 @@ void change_alternate_window() {
     get_versions(filtered_packages.at(selected_package));
     break;
   case DEPENDENCIES:
-    get_dependencies(filtered_packages.at(selected_package), true);
+    get_dependencies(filtered_packages.at(selected_package));
     break;
   case INFO:
     get_info(filtered_packages.at(selected_package));

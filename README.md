@@ -19,10 +19,10 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `Q`  | Exit |
 |  ` Enter` | Show versions, or `npm install` selected version |
 |      `D`  | `npm uninstall` selected package |
-|      `i`  | `npm info` selected package |
+|      `i`  | `npm info` of the selected package |
 |      `I`  | Show dependencies for selected package |
-|      `l`  | Show more of dependencies |
-|      `h`  | Show less of dependencies |
+|      `l`  | Show more of dependencies (expand tree) |
+|      `h`  | Show less of dependencies (contract tree, or close) |
 |      `g`  | Move to the first item in the active window |
 |      `G`  | Move to the last item in the active window |
 |      `/`  | Start regex filtering in the _package_ window |
