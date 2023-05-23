@@ -144,6 +144,8 @@ int main(int argc, const char *argv[])
       start_alternate = alternate_length - LIST_HEIGHT;
     } else if (selected_alternate_row >= LIST_HEIGHT + start_alternate) {
       start_alternate = selected_alternate_row - LIST_HEIGHT + 1;
+    } else if (start_alternate > selected_alternate_row) {
+      start_alternate = selected_alternate_row;
     } else if (selected_alternate_row < start_alternate) {
       --start_alternate;
     }
@@ -266,18 +268,16 @@ int main(int argc, const char *argv[])
           if (alternate_mode == DEPENDENCIES) {
             if (show_sub_dependencies) {
               show_sub_dependencies = false;
-              // TODO: Remember selected dependency?
-              get_dependencies(filtered_packages.at(selected_package));
+              get_dependencies(filtered_packages.at(selected_package), false);
             } else {
               close_alternate_window();
             }
           }
           break;
         case 'l':
-          if (alternate_mode == DEPENDENCIES) {
+          if (alternate_mode == DEPENDENCIES && !show_sub_dependencies) {
             show_sub_dependencies = true;
-            // TODO: Remember selected dependency?
-            get_dependencies(filtered_packages.at(selected_package));
+            get_dependencies(filtered_packages.at(selected_package), false);
           }
           break;
         case 'q':
@@ -479,12 +479,16 @@ void get_versions(PACKAGE package)
   print_alternate(package);
 }
 
-void get_dependencies(PACKAGE package)
-{
+void get_dependencies(PACKAGE package, bool init) {
   // TODO: Add loading screen
   string package_name = escape_slashes(package.name);
   char command[1024];
   snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), show_sub_dependencies ? "^$" : "[│ ] ");
+  string selected;
+
+  if (!init) {
+    selected = find_dependency_root();
+  }
 
   if (fake_http_requests) { // {{{1
     alternate_rows.clear();
@@ -516,7 +520,13 @@ void get_dependencies(PACKAGE package)
   } else { // }}}
     alternate_rows = shell_command(command);
   }
+
   selected_alternate_row = 0;
+
+  if (!init) {
+    select_dependency_node(selected);
+  }
+
   print_alternate(package);
 }
 
@@ -659,8 +669,8 @@ bool confirm(string message)
   return false;
 }
 
-// TODO: Rename
 // TODO: Color unmet deps?
+// TODO: Handle pad size when rows exceed one row
 void print_alternate(PACKAGE package)
 {
   string package_version = package.version;
@@ -705,6 +715,36 @@ void change_alternate_window() {
     break;
   }
 }
+
+string find_dependency_root()
+{
+  if (alternate_rows.size() == 0) return "";
+
+  regex root ("^(└|├)");
+  while (selected_alternate_row > 0 && !regex_search(alternate_rows.at(selected_alternate_row), root)) {
+    --selected_alternate_row;
+  }
+
+  string match = alternate_rows.at(selected_alternate_row);
+  int end = match.find("  ");
+
+  return match.substr(0, end);
+}
+
+void select_dependency_node(string &selected) {
+  int size = alternate_rows.size();
+  int selected_length = selected.length();
+  string row;
+
+  while (true) {
+    row = alternate_rows.at(selected_alternate_row);
+    if (row.compare(0, selected_length, selected) == 0) break;
+    if (selected_alternate_row >= size) break;
+
+    ++selected_alternate_row;
+  }
+}
+
 vector<string> shell_command(const string command)
 {
   vector<string> result;
