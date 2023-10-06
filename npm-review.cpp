@@ -237,7 +237,6 @@ int main(int argc, const char *argv[])
         case ctrl('z'):
           raise(SIGTSTP);
           break;
-        // TODO: Bail if no packages, or exit?
         case KEY_DOWN:
         case 'J':
           selected_package = (selected_package + 1) % filtered_packages.size();
@@ -312,32 +311,34 @@ int main(int argc, const char *argv[])
         case KEY_DOWN:
         case 'j':
         case 'J':
+          if (filtered_packages.size() == 0) continue;
           selected_package = (selected_package + 1) % filtered_packages.size();
           break;
         case KEY_UP:
         case 'k':
         case 'K':
+          if (filtered_packages.size() == 0) continue;
           selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
           break;
           break;
         case 'i':
-          // TODO: Bounds check?
+          if (filtered_packages.size() == 0) continue;
           alternate_mode = INFO;
           get_info(filtered_packages.at(selected_package));
           break;
         case 'I':
         case 'l':
-          // TODO: Bounds check?
+          if (filtered_packages.size() == 0) continue;
           alternate_mode = DEPENDENCIES;
           get_dependencies(filtered_packages.at(selected_package));
           break;
         case '\n':
-          // TODO: Bounds check?
+          if (filtered_packages.size() == 0) continue;
           alternate_mode = VERSION;
           get_versions(filtered_packages.at(selected_package));
           break;
         case 'D': {
-          // TODO: Bounds check?
+          if (filtered_packages.size() == 0) continue;
           PACKAGE package = filtered_packages.at(selected_package);
           uninstall_package(package);
           break;
@@ -479,7 +480,8 @@ void get_versions(PACKAGE package)
   print_alternate(package);
 }
 
-void get_dependencies(PACKAGE package, bool init) {
+void get_dependencies(PACKAGE package, bool init)
+{
   // TODO: Add loading screen
   string package_name = escape_slashes(package.name);
   char command[1024];
