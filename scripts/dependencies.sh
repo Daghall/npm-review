@@ -9,6 +9,7 @@ npm ls --all 2> /dev/null | \
   sed 's/ UNMET OPTIONAL DEPENDENCY/ !⎇/' | \
   sed -n "/^... $package@/,/^[├└]/p" | \
   sed -E \
+    -e '$d' \
     -e 's/..// ' \
     -e 's/ deduped//' \
     -e 's/@/\t/g' \
@@ -26,7 +27,7 @@ npm ls --all 2> /dev/null | \
       data[FNR][2] = $3 \
     } \
     END { \
-    for (i = 1; i < NR; ++i) { \
+    for (i = 1; i <= NR; ++i) { \
       printf("%s %-*s  %s\n", \
         data[i][0], max - length(data[i][0]), \
         data[i][1], \

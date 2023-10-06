@@ -485,7 +485,7 @@ void get_dependencies(PACKAGE package, bool init)
   // TODO: Add loading screen
   string package_name = escape_slashes(package.name);
   char command[1024];
-  snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), show_sub_dependencies ? "^$" : "[│ ] ");
+  snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), show_sub_dependencies ? "^$" : "^[│ ]");
   string selected;
 
   if (!init) {
