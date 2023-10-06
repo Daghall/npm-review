@@ -35,9 +35,18 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 
 To start regex filtering, hit `/` and start typing.
 
-Pressing `Enter`  exits search mode, keeping the filtering.
+Pressing `Enter` exits search mode, keeping the filtering.
 
-Press `Esc` or `ctrl-c` to clear pattern and exit search mode.
+Press `Esc` or `ctrl-c` (while in search mode) to clear pattern and exit search mode, showing everything.
+
+
+### Initialize with search
+
+A search pattern can be give on the command line, prefixed with a `/`, to start with a filtered list. For example:
+
+```
+$ npm-review /e.*p
+```
 
 
 ## Alternate window

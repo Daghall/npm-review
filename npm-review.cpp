@@ -52,15 +52,27 @@ short selected_alternate_row = 0;
 enum alternate_modes alternate_mode;
 bool show_sub_dependencies = false;
 
+bool search_mode = false;
+string search_string = "";
+
+
 int main(int argc, const char *argv[])
 {
   while (--argc > 0) {
-    switch (argv[argc][1]) {
-      case 'd':
-        debug_log = fopen("./log", "w");
+    switch (argv[argc][0]) {
+      case '-': 
+        switch (argv[argc][1]) {
+          case 'd':
+            debug_log = fopen("./log", "w");
+            break;
+          case 'f':
+            fake_http_requests = true;
+            break;
+        }
         break;
-      case 'f':
-        fake_http_requests = true;
+      case '/':
+        search_string = argv[argc];
+        search_string.erase(0, 1);
         break;
     }
   }
@@ -83,8 +95,6 @@ int main(int argc, const char *argv[])
 
   unsigned short start_packages = 0;
   unsigned short start_alternate = 0;
-  bool search_mode = false;
-  string search_string = "";
 
   while (true) {
     unsigned short package_index = 0;
@@ -113,6 +123,10 @@ int main(int argc, const char *argv[])
     }
 
     wclear(package_window);
+
+    if (search_string != "") {
+     show_searchsting();
+    }
 
     // Render packages
     for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
@@ -214,7 +228,7 @@ int main(int argc, const char *argv[])
           if (last_character >= 0) {
             search_string.erase(last_character, 1);
             clear_message();
-            show_searchsting(search_string);
+            show_searchsting();
           } else {
             search_mode = false;
             clear_message();
@@ -225,7 +239,7 @@ int main(int argc, const char *argv[])
         default:
           if (is_printable(character)) {
             search_string += character;
-            show_searchsting(search_string);
+            show_searchsting();
           }
       }
       debug("Searching for \"%s\"\n", search_string.c_str());
@@ -372,7 +386,7 @@ int main(int argc, const char *argv[])
         case '/':
           search_mode = true;
           clear_message();
-          show_searchsting(search_string);
+          show_searchsting();
           show_cursor();
           break;
       }
@@ -650,7 +664,7 @@ void show_message(string message, const USHORT color)
   }
 }
 
-void show_searchsting(string search_string)
+void show_searchsting()
 {
   show_message("/" + search_string);
 }

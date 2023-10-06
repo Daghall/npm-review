@@ -54,7 +54,7 @@ void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);
 bool confirm(string message);
 void show_message(string message, const USHORT color = COLOR_DEFAULT);
-void show_searchsting(string search_string);
+void show_searchsting();
 void clear_message();
 void close_alternate_window();
 const unsigned short number_width(unsigned short number_of_packages);
