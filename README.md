@@ -18,7 +18,7 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 | `K` or ⬆️  | Move cursor up in the _package_ window |
 |      `q`  | Close the active window (exit if in _package_ window) |
 |      `Q`  | Exit |
-|  `Enter` | Show versions, or `npm install` selected version |
+|  `Enter`  | Show versions, or `npm install` selected version |
 |      `D`  | `npm uninstall` selected package |
 |      `i`  | `npm info` of the selected package |
 |      `I`  | Show dependencies for selected package |
@@ -27,6 +27,8 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `g`  | Move to the first item in the active window |
 |      `G`  | Move to the last item in the active window |
 |      `/`  | Start regex filtering in the _package_ window |
+| `ctrl-e`  | Scroll the _alternative_ window up |
+| `ctrl-y`  | Scroll the _alternative_ window down |
 
 
 ## Searching

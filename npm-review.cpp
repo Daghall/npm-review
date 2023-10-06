@@ -140,8 +140,6 @@ int main(int argc, const char *argv[])
 
     if (selected_alternate_row <= 0) {
       start_alternate = 0;
-    } else if (selected_alternate_row == alternate_length - 1) {
-      start_alternate = alternate_length - LIST_HEIGHT;
     } else if (selected_alternate_row >= LIST_HEIGHT + start_alternate) {
       start_alternate = selected_alternate_row - LIST_HEIGHT + 1;
     } else if (start_alternate > selected_alternate_row) {
@@ -262,6 +260,24 @@ int main(int argc, const char *argv[])
             selected_alternate_row = max(selected_alternate_row - 1, 0);
           }
           print_alternate(filtered_packages.at(selected_package));
+          break;
+        case ctrl('e'):
+          start_alternate = min((size_t) start_alternate + 1, alternate_rows.size() - 1);
+
+            if (start_alternate > selected_alternate_row ) {
+              ++selected_alternate_row;
+              skip_empty_rows(start_alternate, 1);
+            }
+          break;
+        case ctrl('y'):
+          if (start_alternate > 0) {
+            --start_alternate;
+
+            if (start_alternate + LIST_HEIGHT == selected_alternate_row) {
+              --selected_alternate_row;
+              skip_empty_rows(start_alternate, -1);
+            }
+          }
           break;
         case 'h':
           if (alternate_mode == DEPENDENCIES) {
@@ -704,7 +720,8 @@ void print_alternate(PACKAGE package)
   });
 }
 
-void change_alternate_window() {
+void change_alternate_window()
+{
   switch (alternate_mode) {
   case VERSION:
     get_versions(filtered_packages.at(selected_package));
@@ -716,6 +733,16 @@ void change_alternate_window() {
     get_info(filtered_packages.at(selected_package));
     break;
   }
+}
+
+void skip_empty_rows(unsigned short &start_alternate, short adjustment)
+{
+  if (alternate_rows.at(selected_alternate_row) == "") {
+    start_alternate += adjustment;
+    selected_alternate_row += adjustment;
+  }
+
+  print_alternate(filtered_packages.at(selected_package));
 }
 
 string find_dependency_root()
@@ -733,7 +760,8 @@ string find_dependency_root()
   return match.substr(0, end);
 }
 
-void select_dependency_node(string &selected) {
+void select_dependency_node(string &selected)
+{
   int size = alternate_rows.size();
   int selected_length = selected.length();
   string row;

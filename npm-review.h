@@ -46,6 +46,7 @@ void get_versions(PACKAGE package);
 void get_dependencies(PACKAGE package, bool init = true);
 void get_info(PACKAGE package);
 void change_alternate_window();
+void skip_empty_rows(unsigned short &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
 int sync_shell_command(const string command, std::function<void(char*)> callback);
