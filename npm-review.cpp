@@ -112,7 +112,7 @@ int main(int argc, const char *argv[])
       }
     }
 
-    werase(package_window);
+    wclear(package_window);
 
     // Render packages
     for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
