@@ -47,11 +47,17 @@ WINDOW *package_window = NULL;
 vector<PACKAGE> pkgs;
 vector<PACKAGE> filtered_packages;
 vector<string> alternate_rows;
-unsigned short selected_package = 0;
+
+USHORT selected_package = 0;
 short selected_alternate_row = 0;
+
+USHORT start_alternate = 0;
+USHORT start_packages = 0;
+
 enum alternate_modes alternate_mode;
 bool show_sub_dependencies = false;
 
+bool list_versions = false;
 bool search_mode = false;
 string search_string = "";
 
@@ -60,13 +66,16 @@ int main(int argc, const char *argv[])
 {
   while (--argc > 0) {
     switch (argv[argc][0]) {
-      case '-': 
+      case '-':
         switch (argv[argc][1]) {
           case 'd':
             debug_log = fopen("./log", "w");
             break;
           case 'f':
             fake_http_requests = true;
+            break;
+          case 'V':
+            list_versions = true;
             break;
         }
         break;
@@ -92,9 +101,6 @@ int main(int argc, const char *argv[])
   const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
-
-  unsigned short start_packages = 0;
-  unsigned short start_alternate = 0;
 
   while (true) {
     unsigned short package_index = 0;
@@ -162,14 +168,6 @@ int main(int argc, const char *argv[])
       --start_alternate;
     }
 
-    // Refresh windows
-    debug("Refresh main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
-    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS);
-    if (alternate_window) {
-      debug("Refresh alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
-      prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
-    }
-
     // Render bottom bar
     attron(COLOR_PAIR(COLOR_INFO_BAR));
     // Clear and set background on the entire line
@@ -187,7 +185,7 @@ int main(int argc, const char *argv[])
       }
     }
 
-    if (alternate_window) {
+    if (alternate_window && !list_versions) {
       const unsigned short alternate_number_width = number_width(alternate_rows.size());
       mvprintw(LIST_HEIGHT, COLS / 2, "  %*d/%d", alternate_number_width, selected_alternate_row + 1, alternate_rows.size());
     }
@@ -198,6 +196,26 @@ int main(int argc, const char *argv[])
     } else {
       // Move to last line to make `npm install` render here
       move(LAST_LINE, 0);
+      refresh();
+    }
+
+
+    // Refresh windows
+    debug("Refresh main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
+    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS);
+    if (alternate_window) {
+      debug("Refresh alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
+      prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
+    }
+
+    if (list_versions) {
+      get_all_versions();
+
+      getch_blocking_mode(false);
+      if (list_versions && getch() == ctrl('c')) {
+        list_versions = false;
+        show_message("Aborted");
+      }
     }
 
     const short character = getch();
@@ -246,6 +264,9 @@ int main(int argc, const char *argv[])
     } else if (alternate_window) {
       debug("Sending key '%d' (%#x) to alternate window\n", character, character);
       switch (character) {
+        case ERR:
+          getch_blocking_mode(true);
+          break;
         case ctrl('z'):
           raise(SIGTSTP);
           break;
@@ -267,6 +288,10 @@ int main(int argc, const char *argv[])
             selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
           }
           print_alternate(filtered_packages.at(selected_package));
+
+          if (alternate_mode == VERSION_CHECK) {
+            selected_package = selected_alternate_row;
+          }
           break;
         case 'k':
           selected_alternate_row = max(selected_alternate_row - 1, 0);
@@ -274,8 +299,14 @@ int main(int argc, const char *argv[])
             selected_alternate_row = max(selected_alternate_row - 1, 0);
           }
           print_alternate(filtered_packages.at(selected_package));
+
+          if (alternate_mode == VERSION_CHECK) {
+            selected_package = selected_alternate_row;
+          }
           break;
         case ctrl('e'):
+          if (alternate_mode == VERSION_CHECK) continue;
+
           start_alternate = min((size_t) start_alternate + 1, alternate_rows.size() - 1);
 
             if (start_alternate > selected_alternate_row ) {
@@ -284,6 +315,8 @@ int main(int argc, const char *argv[])
             }
           break;
         case ctrl('y'):
+          if (alternate_mode == VERSION_CHECK) continue;
+
           if (start_alternate > 0) {
             --start_alternate;
 
@@ -316,8 +349,17 @@ int main(int argc, const char *argv[])
         case 'Q':
           return exit();
         case '\n':
-          if (alternate_mode == VERSION) {
+          switch (alternate_mode) {
+            case VERSION:
             install_package(filtered_packages.at(selected_package), alternate_rows.at(selected_alternate_row));
+              break;
+            case DEPENDENCIES:
+            case INFO:
+              break;
+            case VERSION_CHECK:
+              alternate_mode = VERSION;
+              print_versions(filtered_packages.at(selected_package));
+              break;
           }
           break;
         case 'g':
@@ -330,10 +372,10 @@ int main(int argc, const char *argv[])
           break;
       }
     } else { // Package window
-      debug("Sending key '%c' (%#x) to main window\n", character, character);
+      debug("Sending key '%c' (%#x) to package window\n", character, character);
       switch (character) {
         case ERR:
-          nodelay(stdscr, false); // Make `getch` block
+          getch_blocking_mode(true);
           break;
         case ctrl('z'):
           raise(SIGTSTP);
@@ -365,7 +407,7 @@ int main(int argc, const char *argv[])
         case '\n':
           if (filtered_packages.size() == 0) continue;
           alternate_mode = VERSION;
-          get_versions(filtered_packages.at(selected_package));
+          print_versions(filtered_packages.at(selected_package));
           break;
         case 'D': {
           if (filtered_packages.size() == 0) continue;
@@ -389,6 +431,11 @@ int main(int argc, const char *argv[])
           show_searchsting();
           show_cursor();
           break;
+        case 'V':
+          selected_package = 0;
+          selected_alternate_row = 0;
+          list_versions = true;
+          break;
       }
     }
   }
@@ -402,7 +449,7 @@ void initialize() {
   ESCDELAY = 0;           // Remove delay of ESC, since no escape sequences are expected
   raw();                  // Handle signals manually, via `getch`
   noecho();               // Do not echo key-presses
-  nodelay(stdscr, true);  // Make `getch` non-blocking
+  getch_blocking_mode(false);
   start_color();
   use_default_colors();
   assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
@@ -459,9 +506,17 @@ void read_packages(MAX_LENGTH *max_length)
   });
 }
 
-void get_versions(PACKAGE package)
+vector<string> get_versions(PACKAGE package)
 {
   const char* package_name = package.name.c_str();
+  char command[1024];
+  // TODO: Break out to script file:
+  snprintf(command, 1024, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package_name);
+  return shell_command(command);
+}
+
+void print_versions(PACKAGE package)
+{
 
   // TODO: Break out and clean up:
   mvprintw(0, COLS / 2 - 1, "  Loading...                 "); // TODO: Pretty up
@@ -472,9 +527,6 @@ void get_versions(PACKAGE package)
 
   selected_alternate_row = -1;
 
-  char command[1024];
-  // TODO: Break out to script file:
-  snprintf(command, 1024, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package_name);
 
   if (fake_http_requests) { // {{{1
     alternate_rows.clear();
@@ -505,7 +557,7 @@ void get_versions(PACKAGE package)
     alternate_rows.push_back("2.0.0");
     alternate_rows.push_back("1.0.0");
   } else { // }}}
-    alternate_rows = shell_command(command);
+    alternate_rows = get_versions(package);
   }
   print_alternate(package);
 }
@@ -627,6 +679,67 @@ void install_package(PACKAGE package, const string new_version)
   }
 }
 
+void get_all_versions()
+{
+  if (selected_package == 0) {
+    alternate_rows.clear();
+    alternate_mode = VERSION_CHECK;
+    selected_alternate_row = 0;
+  }
+
+  PACKAGE package = filtered_packages.at(selected_package);
+  string message = "Checking versions for \"" + package.name + "\"";
+  show_message(message.c_str());
+  alternate_rows.push_back("Loading...             ");
+  print_alternate(package);
+  prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
+
+  vector<string> versions = get_versions(package);
+  string current_major = get_major(package.version);
+  string latest_major = get_major(versions.at(0));
+
+  vector<string>::iterator first_of_current = find_if(versions.begin(), versions.end(), [&current_major](string item) {
+    return get_major(item) == current_major;
+  });
+
+  int versions_behind = distance(first_of_current, find(versions.begin(), versions.end(), package.version));
+  debug("%s: versions behind: %d – current major: %s, latest major: %s, latest version: %s\n", package.name.c_str(), versions_behind, current_major.c_str(), latest_major.c_str(), versions.at(0).c_str());
+
+  string version_string = "";
+  if (versions_behind > 0) {
+    version_string += to_string(versions_behind);
+    version_string += " new";
+  } else {
+    version_string += "     ✓";
+  }
+
+  string major_string = "";
+  if (current_major != latest_major) {
+    major_string += "– new major: ";
+    major_string += latest_major;
+  }
+  char formatted_string[128];
+  snprintf(formatted_string, 128, " %6s %-14s ", version_string.c_str(), major_string.c_str());
+
+  alternate_rows.pop_back();
+  alternate_rows.push_back(formatted_string);
+  print_alternate(package);
+
+  if (++selected_package >= filtered_packages.size()) {
+    list_versions = false;
+    clear_message();
+  } else {
+    selected_alternate_row = selected_package - 0;
+  }
+}
+
+string get_major(string semver)
+{
+  const size_t dot = semver.find(".");
+  return semver.substr(0, dot);
+}
+
+
 void uninstall_package(PACKAGE package)
 {
   if (!confirm("Uninstall " + package.name + "?")) {
@@ -654,6 +767,7 @@ void uninstall_package(PACKAGE package)
 
 void show_message(string message, const USHORT color)
 {
+  clear_message();
   debug("Showing message: \"%s\", color: %d\n", message.c_str(), color);
   if (color != COLOR_DEFAULT) {
     attron(COLOR_PAIR(color));
@@ -662,6 +776,7 @@ void show_message(string message, const USHORT color)
   if (color != COLOR_DEFAULT) {
     attroff(COLOR_PAIR(color));
   }
+  refresh();
 }
 
 void show_searchsting()
@@ -676,6 +791,7 @@ void clear_message()
 }
 
 void close_alternate_window() {
+  clear_message();
   wclear(alternate_window);
   delwin(alternate_window);
   alternate_window = NULL;
@@ -736,15 +852,20 @@ void print_alternate(PACKAGE package)
 
 void change_alternate_window()
 {
+  debug("Changing alternate window (%d)\n", alternate_mode);
   switch (alternate_mode) {
   case VERSION:
-    get_versions(filtered_packages.at(selected_package));
+    print_versions(filtered_packages.at(selected_package));
     break;
   case DEPENDENCIES:
     get_dependencies(filtered_packages.at(selected_package));
     break;
   case INFO:
     get_info(filtered_packages.at(selected_package));
+    break;
+  case VERSION_CHECK:
+    selected_alternate_row = selected_package;
+    print_alternate(filtered_packages.at(selected_package));
     break;
   }
 }
@@ -813,6 +934,8 @@ int sync_shell_command(const string command, std::function<void(char*)> callback
   FILE *output = popen(command.c_str(), "r");
   setvbuf(output, buffer, _IOLBF, sizeof(buffer));
 
+  debug("Executing sync \"%s\"\n", command.c_str());
+
   while (fgets(buffer, sizeof(buffer), output) != NULL) {
     size_t last = strlen(buffer) - 1;
     buffer[last] = '\0';
@@ -835,7 +958,8 @@ const unsigned short number_width(unsigned short number)
   return i;
 }
 
-string escape_slashes(string str) {
+string escape_slashes(string str)
+{
   regex slash ("/");
   return regex_replace(str, slash, "\\/");
 }
@@ -854,6 +978,11 @@ void hide_cursor()
 {
   show_cursor(); // Explicitly show it to avoid rendering bug after `npm {un,}install`
   curs_set(0);
+}
+
+void getch_blocking_mode(bool should_block)
+{
+  nodelay(stdscr, !should_block);
 }
 
 int exit()

@@ -6,6 +6,11 @@ Heavily inspired by [tig](https://github.com/jonas/tig).
 
 ![Example](/example.gif)
 
+## Flags
+
+  - `-V` – Initialize with [version check](#version-check-v)
+  - See [development](#development) for more
+
 ## Key-bindings
 
 The active window is the _alternate_ window, if it is displayed, _package_ window otherwise.
@@ -20,6 +25,7 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `Q`  | Exit |
 |  `Enter`  | Show versions, or `npm install` selected version |
 |      `D`  | `npm uninstall` selected package |
+|      `V`  | Check version of all packages against latest |
 |      `i`  | `npm info` of the selected package |
 |      `I`  | Show dependencies for selected package |
 |      `l`  | Show more of dependencies (expand tree) |
@@ -69,9 +75,28 @@ Shows basic information about the package.
 
 Shows a tree view of a package's dependencies. By default only the direct dependencies are shown. To show the full tree, hit `l`. Show less with `h`.
 
+### Version check (`V`)
+
+Checks the installed versions of all packages against the _npm registry_.  
+Displays versions behind on the current major, and the newest major, if any.
+
+If `ENTER` is pressed on a row, the package's version list is displayed.
+
+Caveat: the version check list must be re-initialized of the network, when exiting the version view.
+
+Example output:
+```
+bootstrap    4.6.0   (DEV)                2 new – new major: 5
+eslint       5.16.0  (DEV)                    ✓ – new major: 8
+jquery       3.6.0   (DEV)                6 new
+popper.js    1.16.1  (DEV)                    ✓ – new major: 2
+redom        3.29.0  (DEV)                1 new
+webpack-cli  5.1.1   (DEV)                3 new
+```
+
 ## Prerequisites
 
-The data being fetched is processed with external programs, that needs to be installed in order for the program to work propely:
+The data being fetched is processed with external programs, that needs to be installed in order for the program to work properly:
 
   - [jq](https://github.com/stedolan/jq)
   - [gawk](https://www.gnu.org/software/gawk/)
@@ -82,6 +107,7 @@ The data being fetched is processed with external programs, that needs to be ins
 Only developed/tested on macOS.
 
 ### Install dependencies
+
 These may be installed with [homebrew](https://github.com/Homebrew/brew):
 ```
 brew install ncurses jq gawk
@@ -106,7 +132,7 @@ npm-review
 
 ## Caveats
 
-- Error handling is minimal
+- Error handling is **minimal**
 - Resizing terminal breaks rendering
 
 ## Development
