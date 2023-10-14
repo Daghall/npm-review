@@ -685,12 +685,14 @@ void get_all_versions()
     alternate_rows.clear();
     alternate_mode = VERSION_CHECK;
     selected_alternate_row = 0;
+    for_each(filtered_packages.begin(), filtered_packages.end(), [](PACKAGE package) {
+      alternate_rows.push_back("Pending...             ");
+    });
   }
 
   PACKAGE package = filtered_packages.at(selected_package);
   string message = "Checking versions for \"" + package.name + "\"";
   show_message(message.c_str());
-  alternate_rows.push_back("Loading...             ");
   print_alternate(package);
   prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
 
@@ -721,8 +723,7 @@ void get_all_versions()
   char formatted_string[128];
   snprintf(formatted_string, 128, " %6s %-14s ", version_string.c_str(), major_string.c_str());
 
-  alternate_rows.pop_back();
-  alternate_rows.push_back(formatted_string);
+  alternate_rows.at(selected_package) = formatted_string;
   print_alternate(package);
 
   if (++selected_package >= filtered_packages.size()) {
