@@ -664,10 +664,14 @@ void init_alternate_window(bool clear_window)
     }
     mvprintw(i, COLS / 2 - 1, "│");
   }
-  mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│");
 
+  mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│");
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
-  mvprintw(0, COLS / 2 + 2, "Loading...");
+  refresh();
+
+  attron(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
+  mvprintw(0, COLS - 13, " Loading... ");
+  attroff(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
   refresh();
 }
 
