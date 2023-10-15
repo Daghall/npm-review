@@ -3,19 +3,10 @@
 
 using namespace std;
 
-// Consants
-const unsigned short COLOR_DEFAULT = -1;
-const unsigned short COLOR_SELECTED_PACKAGE = 1;
-const unsigned short COLOR_PACKAGE = 2;
-const unsigned short COLOR_OLD_VERSION = 3;
-const unsigned short COLOR_CURRENT_VERSION = 4;
-const unsigned short COLOR_INFO_BAR = 5;
-
-const unsigned short BOTTOM_BAR_HEIGHT = 2;
-const unsigned short KEY_ESC = 0x1B;
-const unsigned short KEY_DELETE = 0x7F;
-
 // Types
+//
+typedef unsigned short USHORT;
+
 typedef struct {
   string name;
   string version;
@@ -23,11 +14,10 @@ typedef struct {
 } PACKAGE;
 
 typedef struct {
-  unsigned short name;
-  unsigned short version;
+  USHORT name;
+  USHORT version;
 } MAX_LENGTH;
 
-typedef unsigned short USHORT;
 
 enum alternate_modes {
   VERSION,
@@ -35,6 +25,18 @@ enum alternate_modes {
   INFO,
   VERSION_CHECK,
 };
+
+// Consants
+const USHORT COLOR_DEFAULT = -1;
+const USHORT COLOR_SELECTED_PACKAGE = 1;
+const USHORT COLOR_PACKAGE = 2;
+const USHORT COLOR_OLD_VERSION = 3;
+const USHORT COLOR_CURRENT_VERSION = 4;
+const USHORT COLOR_INFO_BAR = 5;
+
+const USHORT BOTTOM_BAR_HEIGHT = 2;
+const USHORT KEY_ESC = 0x1B;
+const USHORT KEY_DELETE = 0x7F;
 
 #define STR(x) #x
 
@@ -51,7 +53,7 @@ void get_info(PACKAGE package);
 void get_all_versions();
 string get_major(string semver);
 void change_alternate_window();
-void skip_empty_rows(unsigned short &start_alternate, short adjustment);
+void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
 int sync_shell_command(const string command, std::function<void(char*)> callback);
@@ -62,7 +64,7 @@ void show_message(string message, const USHORT color = COLOR_DEFAULT);
 void show_searchsting();
 void clear_message();
 void close_alternate_window();
-const unsigned short number_width(unsigned short number_of_packages);
+const USHORT number_width(USHORT number_of_packages);
 string escape_slashes(string str);
 bool is_printable(char character);
 void show_cursor();

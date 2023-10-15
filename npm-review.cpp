@@ -97,13 +97,13 @@ int main(int argc, const char *argv[])
   // TODO: Handle resize
   // TODO: Sorting?
   // TODO: Cache stuff?
-  const unsigned short package_size = (short) pkgs.size();
-  const unsigned short number_of_packages = max(LIST_HEIGHT, package_size);
+  const USHORT package_size = (short) pkgs.size();
+  const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
 
   while (true) {
-    unsigned short package_index = 0;
+    USHORT package_index = 0;
     string regex_parse_error;
 
     // Searching
@@ -117,7 +117,7 @@ int main(int argc, const char *argv[])
       regex_parse_error = e.what();
     }
 
-    const unsigned short number_of_filtered_packages = (USHORT) filtered_packages.size();
+    const USHORT number_of_filtered_packages = (USHORT) filtered_packages.size();
     const size_t package_number_width = number_width(package_size);
 
     if (selected_package > number_of_filtered_packages - 1) {
@@ -156,7 +156,7 @@ int main(int argc, const char *argv[])
     }
 
     // Alternate scrolling
-    const unsigned short alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
+    const USHORT alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
 
     if (selected_alternate_row <= 0) {
       start_alternate = 0;
@@ -186,7 +186,7 @@ int main(int argc, const char *argv[])
     }
 
     if (alternate_window && !list_versions) {
-      const unsigned short alternate_number_width = number_width(alternate_rows.size());
+      const USHORT alternate_number_width = number_width(alternate_rows.size());
       mvprintw(LIST_HEIGHT, COLS / 2, "  %*d/%d", alternate_number_width, selected_alternate_row + 1, alternate_rows.size());
     }
     attroff(COLOR_PAIR(COLOR_INFO_BAR));
@@ -871,7 +871,7 @@ void change_alternate_window()
   }
 }
 
-void skip_empty_rows(unsigned short &start_alternate, short adjustment)
+void skip_empty_rows(USHORT &start_alternate, short adjustment)
 {
   if (alternate_rows.at(selected_alternate_row) == "") {
     start_alternate += adjustment;
@@ -946,10 +946,10 @@ int sync_shell_command(const string command, std::function<void(char*)> callback
   return pclose(output);
 }
 
-const unsigned short number_width(unsigned short number)
+const USHORT number_width(USHORT number)
 {
-  unsigned short rest = number;
-  unsigned short i = 0;
+  USHORT rest = number;
+  USHORT i = 0;
 
   while (rest > 0) {
     rest /= 10;
