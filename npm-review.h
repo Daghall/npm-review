@@ -57,7 +57,7 @@ void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
 int sync_shell_command(const string command, std::function<void(char*)> callback);
-void show_loading_screen();
+void init_alternate_window();
 void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);
 bool confirm(string message);

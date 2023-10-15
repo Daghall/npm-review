@@ -185,9 +185,9 @@ int main(int argc, const char *argv[])
       }
     }
 
-    if (alternate_window && !list_versions) {
+    if (alternate_window) {
       const USHORT alternate_number_width = number_width(alternate_rows.size());
-      mvprintw(LIST_HEIGHT, COLS / 2, "  %*d/%d", alternate_number_width, selected_alternate_row + 1, alternate_rows.size());
+      mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│  %*d/%d", alternate_number_width, selected_alternate_row + 1, alternate_rows.size());
     }
     attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
@@ -199,12 +199,18 @@ int main(int argc, const char *argv[])
       refresh();
     }
 
-
     // Refresh windows
     debug("Refresh main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
-    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS);
+    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS / 2 - 2);
     if (alternate_window) {
-      debug("Refresh alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
+      debug("Refresh alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT - 1, start_alternate);
+
+      for (int i = 0; i < LIST_HEIGHT; ++i) {
+        move(i, COLS / 2 + 1);
+        clrtoeol();
+      }
+      refresh();
+
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
     }
 
@@ -516,7 +522,7 @@ vector<string> get_versions(PACKAGE package)
 }
 
 void print_versions(PACKAGE package) {
-  show_loading_screen();
+  init_alternate_window();
 
   selected_alternate_row = -1;
 
@@ -557,7 +563,7 @@ void print_versions(PACKAGE package) {
 
 void get_dependencies(PACKAGE package, bool init)
 {
-  show_loading_screen();
+  init_alternate_window();
 
   string package_name = escape_slashes(package.name);
   char command[1024];
@@ -610,7 +616,7 @@ void get_dependencies(PACKAGE package, bool init)
 
 void get_info(PACKAGE package)
 {
-  show_loading_screen();
+  init_alternate_window();
 
   string package_name = escape_slashes(package.name);
   const char*  package_version = package.version.c_str();
@@ -648,13 +654,18 @@ void get_info(PACKAGE package)
   print_alternate(package);
 }
 
-void show_loading_screen()
+void init_alternate_window()
 {
+  attron(COLOR_PAIR(COLOR_INFO_BAR));
   for (int i = 0; i < LIST_HEIGHT; ++i) {
-    move(i, COLS / 2);
+    move(i, COLS / 2 - 1);
     clrtoeol();
+    mvprintw(i, COLS / 2 - 1, "│");
   }
-  mvprintw(0, COLS / 2 + 1, "Loading...");
+  mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│");
+
+  attroff(COLOR_PAIR(COLOR_INFO_BAR));
+  mvprintw(0, COLS / 2 + 2, "Loading...");
   refresh();
 }
 
@@ -686,6 +697,7 @@ void install_package(PACKAGE package, const string new_version)
 void get_all_versions()
 {
   if (selected_package == 0) {
+    init_alternate_window();
     alternate_rows.clear();
     alternate_mode = VERSION_CHECK;
     selected_alternate_row = 0;
@@ -800,6 +812,12 @@ void close_alternate_window() {
   wclear(alternate_window);
   delwin(alternate_window);
   alternate_window = NULL;
+
+  for (int i = 0; i < LIST_HEIGHT; ++i) {
+    move(i, COLS / 2 - 1);
+    clrtoeol();
+  }
+  refresh();
 }
 
 bool confirm(string message)
