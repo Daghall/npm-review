@@ -515,15 +515,8 @@ vector<string> get_versions(PACKAGE package)
   return shell_command(command);
 }
 
-void print_versions(PACKAGE package)
-{
-
-  // TODO: Break out and clean up:
-  mvprintw(0, COLS / 2 - 1, "  Loading...                 "); // TODO: Pretty up
-  for (int i = 1; i < LIST_HEIGHT; ++i) {
-    mvprintw(i, COLS / 2, "                               "); // TODO: Pretty up
-  }
-  refresh();
+void print_versions(PACKAGE package) {
+  show_loading_screen();
 
   selected_alternate_row = -1;
 
@@ -564,7 +557,8 @@ void print_versions(PACKAGE package)
 
 void get_dependencies(PACKAGE package, bool init)
 {
-  // TODO: Add loading screen
+  show_loading_screen();
+
   string package_name = escape_slashes(package.name);
   char command[1024];
   snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), show_sub_dependencies ? "^$" : "^[│ ]");
@@ -616,7 +610,8 @@ void get_dependencies(PACKAGE package, bool init)
 
 void get_info(PACKAGE package)
 {
-  // TODO: Add loading screen
+  show_loading_screen();
+
   string package_name = escape_slashes(package.name);
   const char*  package_version = package.version.c_str();
   char command[1024];
@@ -653,6 +648,15 @@ void get_info(PACKAGE package)
   print_alternate(package);
 }
 
+void show_loading_screen()
+{
+  for (int i = 0; i < LIST_HEIGHT; ++i) {
+    move(i, COLS / 2);
+    clrtoeol();
+  }
+  mvprintw(0, COLS / 2 + 1, "Loading...");
+  refresh();
+}
 
 void install_package(PACKAGE package, const string new_version)
 {
@@ -822,15 +826,18 @@ bool confirm(string message)
 // TODO: Handle pad size when rows exceed one row
 void print_alternate(PACKAGE package)
 {
-  string package_version = package.version;
   if (alternate_window) {
     wclear(alternate_window);
     delwin(alternate_window);
   }
-  int alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
-  debug("Number of alternate items: %d\n", alternate_length);
-  alternate_window = newpad(alternate_length, COLS / 2);
+
+  string package_version = package.version;
+  const int alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
   size_t index = 0;
+  alternate_window = newpad(alternate_length, COLS / 2);
+
+  debug("Number of alternate items: %d\n", alternate_length);
+
   for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index](string &version) {
     if (version == package_version) {
       wattron(alternate_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
