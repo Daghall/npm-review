@@ -206,7 +206,7 @@ int main(int argc, const char *argv[])
       debug("Refresh alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT - 1, start_alternate);
 
       for (int i = 0; i < LIST_HEIGHT; ++i) {
-        move(i, COLS / 2 + 1);
+        move(i, COLS / 2);
         clrtoeol();
       }
       refresh();
@@ -563,7 +563,7 @@ void print_versions(PACKAGE package) {
 
 void get_dependencies(PACKAGE package, bool init)
 {
-  init_alternate_window();
+  init_alternate_window(init);
 
   string package_name = escape_slashes(package.name);
   char command[1024];
@@ -654,12 +654,14 @@ void get_info(PACKAGE package)
   print_alternate(package);
 }
 
-void init_alternate_window()
+void init_alternate_window(bool clear_window)
 {
   attron(COLOR_PAIR(COLOR_INFO_BAR));
   for (int i = 0; i < LIST_HEIGHT; ++i) {
-    move(i, COLS / 2 - 1);
-    clrtoeol();
+    if (clear_window) {
+      move(i, COLS / 2 - 1);
+      clrtoeol();
+    }
     mvprintw(i, COLS / 2 - 1, "│");
   }
   mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│");
