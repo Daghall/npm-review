@@ -60,6 +60,8 @@ bool show_sub_dependencies = false;
 bool list_versions = false;
 bool search_mode = false;
 string search_string = "";
+string regex_parse_error;
+string package_bar_info;
 
 
 int main(int argc, const char *argv[])
@@ -104,11 +106,11 @@ int main(int argc, const char *argv[])
 
   while (true) {
     USHORT package_index = 0;
-    string regex_parse_error;
 
     // Searching
     try {
       regex search_regex (search_string);
+      regex_parse_error = "";
       filtered_packages.clear();
       copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
         return regex_search(package.name, search_regex);
@@ -118,7 +120,6 @@ int main(int argc, const char *argv[])
     }
 
     const USHORT number_of_filtered_packages = (USHORT) filtered_packages.size();
-    const size_t package_number_width = number_width(package_size);
 
     if (selected_package > number_of_filtered_packages - 1) {
       selected_package = number_of_filtered_packages - 1;
@@ -170,26 +171,34 @@ int main(int argc, const char *argv[])
 
     // Render bottom bar
     attron(COLOR_PAIR(COLOR_INFO_BAR));
-    // Clear and set background on the entire line
-    mvprintw(LIST_HEIGHT, 0, "%*s", COLS, "");
+    mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
+    attron(COLOR_PAIR(COLOR_INFO_BAR));
 
     if (regex_parse_error.length() > 0) {
-      mvprintw(LIST_HEIGHT, 0, " %s", regex_parse_error.c_str());
+      package_bar_info = regex_parse_error;
     } else if (filtered_packages.size() == 0) {
-      mvprintw(LIST_HEIGHT, 0, " No matches");
+      package_bar_info = "No matches";
     } else {
-      if (search_string.length() > 0 ) {
-        mvprintw(LIST_HEIGHT, 0, " %*d/%-*d (%d)", package_number_width, selected_package + 1, package_number_width, filtered_packages.size(), pkgs.size());
-      } else {
-        mvprintw(LIST_HEIGHT, 0, " %*d/%-*d", package_number_width, selected_package + 1, package_number_width, filtered_packages.size());
+      const int package_number_width = number_width(pkgs.size());
+      char x_of_y[32];
+      snprintf(x_of_y, 32, "%d/%-*zu", selected_package + 1, package_number_width, filtered_packages.size());
+
+      if (search_string.length() > 0) {
+        const size_t len = strlen(x_of_y);
+        snprintf(x_of_y + len, 32, " (%zu)", pkgs.size());
       }
+
+      package_bar_info = x_of_y;
     }
 
+    print_package_bar();
+
     if (alternate_window) {
+      attron(COLOR_PAIR(COLOR_INFO_BAR));
       const USHORT alternate_number_width = number_width(alternate_rows.size());
       mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│  %*d/%d", alternate_number_width, selected_alternate_row + 1, alternate_rows.size());
+      attroff(COLOR_PAIR(COLOR_INFO_BAR));
     }
-    attroff(COLOR_PAIR(COLOR_INFO_BAR));
 
     if (search_mode) {
       move(LAST_LINE, search_string.length() + 1);
@@ -656,6 +665,7 @@ void get_info(PACKAGE package)
 
 void init_alternate_window(bool clear_window)
 {
+  print_package_bar(true);
   attron(COLOR_PAIR(COLOR_INFO_BAR));
   for (int i = 0; i < LIST_HEIGHT; ++i) {
     if (clear_window) {
@@ -900,6 +910,19 @@ void change_alternate_window()
     print_alternate(filtered_packages.at(selected_package));
     break;
   }
+}
+
+void print_package_bar(bool use_global)
+{
+  const USHORT package_bar_length = ((alternate_window || use_global) ? COLS / 2 - 1: COLS) - 13;
+  const bool filtered = regex_parse_error.length() > 0 ||
+    filtered_packages.size() == 0 ||
+    search_string.length() > 0;
+
+  attron(COLOR_PAIR(COLOR_INFO_BAR));
+    mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
+  mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", filtered ? "filtered" : "packages", package_bar_length, package_bar_info.c_str());
+  attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
 void skip_empty_rows(USHORT &start_alternate, short adjustment)
