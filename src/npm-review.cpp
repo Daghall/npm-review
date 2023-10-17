@@ -476,7 +476,7 @@ void initialize() {
   init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_DEFAULT);
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
-  init_pair(COLOR_INFO_BAR, COLOR_BLACK, COLOR_BLUE);
+  init_pair(COLOR_INFO_BAR, COLOR_DEFAULT, COLOR_BLUE);
   debug("Initialized. Columns: %d. Lines: %d\n", COLS, LINES);
 }
 
