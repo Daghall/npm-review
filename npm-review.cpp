@@ -195,8 +195,10 @@ int main(int argc, const char *argv[])
 
     if (alternate_window) {
       attron(COLOR_PAIR(COLOR_INFO_BAR));
-      const USHORT alternate_number_width = number_width(alternate_rows.size());
-      mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│  %*d/%d", alternate_number_width, selected_alternate_row + 1, alternate_rows.size());
+      char x_of_y[32];
+      snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
+      const char* alternate_mode_string = alternate_mode_to_string();
+      mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s", alternate_mode_string, COLS / 2 - (5 + strlen(alternate_mode_string)), x_of_y);
       attroff(COLOR_PAIR(COLOR_INFO_BAR));
     }
 
@@ -915,12 +917,12 @@ void change_alternate_window()
 void print_package_bar(bool use_global)
 {
   const USHORT package_bar_length = ((alternate_window || use_global) ? COLS / 2 - 1: COLS) - 13;
-  const bool filtered = regex_parse_error.length() > 0 ||
-    filtered_packages.size() == 0 ||
-    search_string.length() > 0;
+  const bool filtered = search_string.length() > 0;
 
   attron(COLOR_PAIR(COLOR_INFO_BAR));
+  if (alternate_mode != DEPENDENCIES) {
     mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
+  }
   mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", filtered ? "filtered" : "packages", package_bar_length, package_bar_info.c_str());
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
@@ -1017,6 +1019,20 @@ string escape_slashes(string str)
 {
   regex slash ("/");
   return regex_replace(str, slash, "\\/");
+}
+
+const char* alternate_mode_to_string()
+{
+  switch (alternate_mode) {
+    case VERSION:
+      return "versions";
+    case DEPENDENCIES:
+      return "dependencies";
+    case INFO:
+      return "info";
+    case VERSION_CHECK:
+      return "version check";
+  }
 }
 
 bool is_printable(char character)

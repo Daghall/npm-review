@@ -69,6 +69,7 @@ void close_alternate_window();
 const USHORT number_width(USHORT number_of_packages);
 string escape_slashes(string str);
 bool is_printable(char character);
+const char* alternate_mode_to_string();
 void show_cursor();
 void hide_cursor();
 void getch_blocking_mode(bool should_block);
