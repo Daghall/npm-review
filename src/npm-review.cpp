@@ -21,11 +21,11 @@
 using namespace std;
 
 const char *INFO_STRING = {
-#include "build/info"
+#include "../build/info"
 };
 
 const char *DEPENDENCIES_STRING = {
-#include "build/dependencies"
+#include "../build/dependencies"
 };
 
 // Debugging
