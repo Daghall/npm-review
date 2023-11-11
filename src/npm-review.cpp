@@ -238,7 +238,6 @@ int main(int argc, const char *argv[])
 
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
-      clear_message();
 
       switch (character) {
         case ctrl('c'):
@@ -254,15 +253,19 @@ int main(int argc, const char *argv[])
           raise(SIGTSTP);
         case '\n':
           search_mode = false;
+          if (search_string == "") {
+            search_string = "";
+            show_message("Ignoring empty pattern");
+          }
           hide_cursor();
           break;
         case KEY_DELETE:
         case KEY_BACKSPACE:
         case '\b': {
-          const short last_character = search_string.length() - 1;
+          const short last_character_position = search_string.length() - 1;
 
-          if (last_character >= 0) {
-            search_string.erase(last_character, 1);
+          if (last_character_position >= 0) {
+            search_string.erase(last_character_position, 1);
             clear_message();
             show_searchsting();
           } else {
