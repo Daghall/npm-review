@@ -205,8 +205,6 @@ int main(int argc, const char *argv[])
     if (search_mode) {
       move(LAST_LINE, search_string.length() + 1);
     } else {
-      // Move to last line to make `npm install` render here
-      move(LAST_LINE, 0);
       refresh();
     }
 
@@ -280,6 +278,8 @@ int main(int argc, const char *argv[])
       debug("Searching for \"%s\"\n", search_string.c_str());
     } else if (alternate_window) {
       debug("Sending key '%d' (%#x) to alternate window\n", character, character);
+      clear_message();
+
       switch (character) {
         case ERR:
           getch_blocking_mode(true);
@@ -690,7 +690,7 @@ void init_alternate_window(bool clear_window)
 void install_package(PACKAGE package, const string new_version)
 {
   // Move to last line to make `npm install` render here
-  move(LAST_LINE, 0);
+  show_message("Installing \"" + package.name + "@" + new_version + "\"");
 
   char command[1024];
   snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
@@ -710,6 +710,8 @@ void install_package(PACKAGE package, const string new_version)
     // TODO: Handle error
     debug("Install failed\n");
   }
+
+  show_message("Installed \"" + package.name + "@" + new_version + "\"");
 }
 
 void get_all_versions()
