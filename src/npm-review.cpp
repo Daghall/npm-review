@@ -59,6 +59,7 @@ bool show_sub_dependencies = false;
 
 bool list_versions = false;
 bool search_mode = false;
+bool message_shown = false;
 string search_string = "";
 string regex_parse_error;
 string package_bar_info;
@@ -131,7 +132,7 @@ int main(int argc, const char *argv[])
 
     wclear(package_window);
 
-    if (search_string != "") {
+    if (search_string != "" && !message_shown) {
      show_searchsting();
     }
 
@@ -237,6 +238,8 @@ int main(int argc, const char *argv[])
 
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
+      clear_message();
+
       switch (character) {
         case ctrl('c'):
         case KEY_ESC:
@@ -390,6 +393,8 @@ int main(int argc, const char *argv[])
       }
     } else { // Package window
       debug("Sending key '%c' (%#x) to package window\n", character, character);
+      clear_message();
+
       switch (character) {
         case ERR:
           getch_blocking_mode(true);
@@ -805,6 +810,7 @@ void uninstall_package(PACKAGE package)
 void show_message(string message, const USHORT color)
 {
   clear_message();
+  message_shown = true;
   debug("Showing message: \"%s\", color: %d\n", message.c_str(), color);
   if (color != COLOR_DEFAULT) {
     attron(COLOR_PAIR(color));
@@ -825,6 +831,7 @@ void clear_message()
 {
   move(LAST_LINE, 0);
   clrtoeol();
+  message_shown = false;
 }
 
 void close_alternate_window() {
