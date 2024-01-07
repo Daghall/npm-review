@@ -47,7 +47,7 @@ vector<string> split_string(string package_string);
 vector<string> shell_command(const string);
 void print_alternate(PACKAGE package);
 vector<string> get_versions(PACKAGE package);
-void print_versions(PACKAGE package);
+void print_versions(PACKAGE package, int alternate_row = -1);
 void get_dependencies(PACKAGE package, bool init = true);
 void get_info(PACKAGE package);
 void get_all_versions();

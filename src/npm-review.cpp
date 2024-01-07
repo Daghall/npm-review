@@ -77,6 +77,13 @@ int main(int argc, const char *argv[])
           case 'f':
             fake_http_requests = true;
             break;
+          case 'p':
+          {
+            pkgs.push_back({
+              .name = argv[argc + 1],
+            });
+            break;
+          }
           case 'V':
             list_versions = true;
             break;
@@ -91,15 +98,25 @@ int main(int argc, const char *argv[])
 
   initialize();
 
+
   MAX_LENGTH max_length;
   max_length.name = 0;
   max_length.version = 0;
 
-  read_packages(&max_length);
+  if (pkgs.size() == 1) {
+    show_message("Fetching versions for " + pkgs.at(0).name + "...");
+    alternate_mode = VERSION;
+    // TODO: Handle invalid package name
+    print_versions(pkgs.at(0), 0);
+  } else {
+    read_packages(&max_length);
+  }
 
   // TODO: Handle resize
   // TODO: Sorting?
   // TODO: Cache stuff?
+  // TODO: gg?
+  // TODO: Jump to last version of current minor
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, COLS);
@@ -540,10 +557,10 @@ vector<string> get_versions(PACKAGE package)
   return shell_command(command);
 }
 
-void print_versions(PACKAGE package) {
+void print_versions(PACKAGE package, int alternate_row) {
   init_alternate_window();
 
-  selected_alternate_row = -1;
+  selected_alternate_row = alternate_row;
 
 
   if (fake_http_requests) { // {{{1
