@@ -8,6 +8,9 @@ build: includes src/npm-review.cpp src/npm-review.h
 install: build
 	cp npm-review /usr/local/bin
 
+watch: build
+	@echo "Building done"
+
 includes:
 	@mkdir -p build/
 	@for file in $$(ls scripts); do \
