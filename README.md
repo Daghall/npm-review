@@ -30,7 +30,10 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `I`  | Show dependencies for selected package |
 |      `l`  | Show more of dependencies (expand tree) |
 |      `h`  | Show less of dependencies (contract tree, or close) |
-|      `g`  | Move to the first item in the active window |
+|     `gg`  | Move to the first item in the active window |
+|     `gj`  | Move to the next **lower** major _version_ (or down) |
+|     `gk`  | Move to the next **higher** major _version_ (or up) |
+|     `gc`  | Move to the currently installed _version_ (or no-op) |
 |      `G`  | Move to the last item in the active window |
 |      `/`  | Start regex filtering in the _package_ window |
 | `ctrl-e`  | Scroll the _alternative_ window up |

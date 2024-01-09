@@ -115,12 +115,13 @@ int main(int argc, const char *argv[])
   // TODO: Handle resize
   // TODO: Sorting?
   // TODO: Cache stuff?
-  // TODO: gg?
-  // TODO: Jump to last version of current minor
+  // TODO: Help screen
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, COLS);
   debug("Number of packages: %d\n", number_of_packages);
+
+  string key_sequence = "";
 
   while (true) {
     USHORT package_index = 0;
@@ -151,6 +152,10 @@ int main(int argc, const char *argv[])
 
     if (search_string != "" && !message_shown) {
      show_searchsting();
+    }
+
+    if (key_sequence != "") {
+      show_key_sequence(key_sequence);
     }
 
     // Render packages
@@ -253,6 +258,96 @@ int main(int argc, const char *argv[])
 
     const short character = getch();
 
+    if (key_sequence.length() > 0) {
+      debug("Key sequence: %s%c\n", key_sequence.c_str(), (char) character);
+
+      if (alternate_window) {
+        switch (character) {
+          case 'g':
+            selected_alternate_row = 0;
+            print_alternate(filtered_packages.at(selected_package));
+            break;
+          case 'c':
+            {
+              if (alternate_mode != VERSION) {
+                debug("Key sequence ignored, inapplicable mode\n");
+                break;
+              }
+
+              vector<string>::iterator current = find(alternate_rows.begin(), alternate_rows.end(), filtered_packages.at(selected_package).version);
+              selected_alternate_row = distance(current, alternate_rows.begin());
+              print_alternate(filtered_packages.at(selected_package));
+              break;
+            }
+          case 'j':
+            {
+              if (alternate_mode != VERSION) {
+                debug("Key sequence interpreted as 'j'\n");
+                alternate_window_down();
+                break;
+              }
+
+              const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
+              vector<string>::iterator next_major = find_if(alternate_rows.begin() + selected_alternate_row, alternate_rows.end(), [&major_version](string item) {
+                  return atoi(item.c_str()) != major_version;
+                  });
+
+              if (next_major == alternate_rows.end()) {
+                selected_alternate_row = alternate_rows.size() - 1;
+                show_error_message("Hit bottom, no more versions");
+              } else {
+                selected_alternate_row = distance(alternate_rows.begin(), next_major);
+              }
+
+              print_alternate(filtered_packages.at(selected_package));
+              break;
+            }
+          case 'k':
+            {
+              if (alternate_mode != VERSION) {
+                debug("Key sequence interpreted as 'k'\n");
+                alternate_window_up();
+                break;
+              }
+              const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
+              vector<string>::reverse_iterator previous_major = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [&major_version](string item) {
+                  return atoi(item.c_str()) != major_version;
+                  });
+
+              if (previous_major == alternate_rows.rend()) {
+                selected_alternate_row = 0;
+                show_error_message("Hit top, no more versions");
+              } else {
+                selected_alternate_row = distance(previous_major, alternate_rows.rend() - 1);
+              }
+
+              print_alternate(filtered_packages.at(selected_package));
+              break;
+            }
+          default:
+            debug("Unrecognized sequence\n");
+        }
+      } else { // Package window
+        switch (character) {
+          case 'g':
+            selected_package = 0;
+            break;
+          case 'j':
+            package_window_down();
+            break;
+          case 'k':
+            package_window_up();
+            break;
+          default:
+            debug("Unrecognized sequence\n");
+        }
+      }
+
+      key_sequence= "";
+      clear_key_sequence();
+      continue;
+    }
+
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
 
@@ -272,7 +367,7 @@ int main(int argc, const char *argv[])
           search_mode = false;
           if (search_string == "") {
             search_string = "";
-            show_message("Ignoring empty pattern");
+            show_error_message("Ignoring empty pattern");
           }
           hide_cursor();
           break;
@@ -323,22 +418,14 @@ int main(int argc, const char *argv[])
           start_alternate = 0;
           break;
         case 'j':
-          selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
-          if (alternate_rows.at(selected_alternate_row) == "") {
-            selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
-          }
-          print_alternate(filtered_packages.at(selected_package));
+          alternate_window_down();
 
           if (alternate_mode == VERSION_CHECK) {
             selected_package = selected_alternate_row;
           }
           break;
         case 'k':
-          selected_alternate_row = max(selected_alternate_row - 1, 0);
-          if (alternate_rows.at(selected_alternate_row) == "") {
-            selected_alternate_row = max(selected_alternate_row - 1, 0);
-          }
-          print_alternate(filtered_packages.at(selected_package));
+          alternate_window_up();
 
           if (alternate_mode == VERSION_CHECK) {
             selected_package = selected_alternate_row;
@@ -403,8 +490,8 @@ int main(int argc, const char *argv[])
           }
           break;
         case 'g':
-          selected_alternate_row = 0;
-          print_alternate(filtered_packages.at(selected_package));
+          key_sequence = character;
+          show_key_sequence(key_sequence);
           break;
         case 'G':
           selected_alternate_row = (int) alternate_rows.size() - 1;
@@ -425,14 +512,12 @@ int main(int argc, const char *argv[])
         case KEY_DOWN:
         case 'j':
         case 'J':
-          if (filtered_packages.size() == 0) continue;
-          selected_package = (selected_package + 1) % filtered_packages.size();
+          package_window_down();
           break;
         case KEY_UP:
         case 'k':
         case 'K':
-          if (filtered_packages.size() == 0) continue;
-          selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
+          package_window_up();
           break;
           break;
         case 'i':
@@ -462,7 +547,8 @@ int main(int argc, const char *argv[])
         case 'Q':
           return exit();
         case 'g':
-          selected_package = 0;
+          key_sequence = character;
+          show_key_sequence(key_sequence);
           break;
         case 'G':
           selected_package = number_of_packages - 1;
@@ -499,7 +585,7 @@ void initialize() {
 
   init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
   init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
-  init_pair(COLOR_OLD_VERSION, COLOR_RED, COLOR_DEFAULT);
+  init_pair(COLOR_ERROR, COLOR_RED, COLOR_DEFAULT);
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_INFO_BAR, COLOR_DEFAULT, COLOR_BLUE);
   debug("Initialized. Columns: %d. Lines: %d\n", COLS, LINES);
@@ -565,31 +651,32 @@ void print_versions(PACKAGE package, int alternate_row) {
 
   if (fake_http_requests) { // {{{1
     alternate_rows.clear();
-    alternate_rows.push_back("25.0.0");
-    alternate_rows.push_back("24.0.0");
-    alternate_rows.push_back("23.0.0");
-    alternate_rows.push_back("22.0.0");
-    alternate_rows.push_back("21.0.0");
-    alternate_rows.push_back("20.0.0");
-    alternate_rows.push_back("19.0.0");
-    alternate_rows.push_back("18.0.0");
-    alternate_rows.push_back("17.0.0");
-    alternate_rows.push_back("16.0.0");
-    alternate_rows.push_back("15.0.0");
-    alternate_rows.push_back("14.0.0");
-    alternate_rows.push_back("13.0.0");
-    alternate_rows.push_back("12.0.0");
-    alternate_rows.push_back("12.0.0");
-    alternate_rows.push_back("11.0.0");
-    alternate_rows.push_back("10.0.0");
-    alternate_rows.push_back("9.0.0");
-    alternate_rows.push_back("8.0.0");
-    alternate_rows.push_back("7.0.0");
-    alternate_rows.push_back("6.0.0");
-    alternate_rows.push_back("5.3.5");
+    alternate_rows.push_back("5.1.1");
+    alternate_rows.push_back("5.1.0");
+    alternate_rows.push_back("5.0.0");
+    alternate_rows.push_back("4.2.0");
+    alternate_rows.push_back("4.1.3");
+    alternate_rows.push_back("4.1.2");
+    alternate_rows.push_back("4.1.1");
+    alternate_rows.push_back("4.1.0");
     alternate_rows.push_back("4.0.0");
+    alternate_rows.push_back("3.7.0");
+    alternate_rows.push_back("3.6.0");
+    alternate_rows.push_back("3.5.0");
+    alternate_rows.push_back("3.4.0");
+    alternate_rows.push_back("3.3.0");
+    alternate_rows.push_back("3.2.0");
+    alternate_rows.push_back("3.1.0");
     alternate_rows.push_back("3.0.0");
+    alternate_rows.push_back("2.4.0");
+    alternate_rows.push_back("2.3.0");
+    alternate_rows.push_back("2.2.0");
+    alternate_rows.push_back("2.1.0");
+    alternate_rows.push_back("2.0.1");
     alternate_rows.push_back("2.0.0");
+    alternate_rows.push_back("1.2.2");
+    alternate_rows.push_back("1.2.1");
+    alternate_rows.push_back("1.2.0");
     alternate_rows.push_back("1.0.0");
   } else { // }}}
     alternate_rows = get_versions(package);
@@ -824,8 +911,15 @@ void uninstall_package(PACKAGE package)
   } else {
     // TODO: Handle error
     debug("Uninstall failed\n");
+    show_error_message("Uninstall failed");
   }
 }
+
+void show_key_sequence(string message)
+{
+  mvprintw(LAST_LINE, COLS - KEY_SEQUENCE_DISTANCE, "%s", message.c_str());
+}
+
 
 void show_message(string message, const USHORT color)
 {
@@ -842,6 +936,11 @@ void show_message(string message, const USHORT color)
   refresh();
 }
 
+void show_error_message(string message)
+{
+  show_message(message, COLOR_ERROR);
+}
+
 void show_searchsting()
 {
   show_message("/" + search_string);
@@ -852,6 +951,12 @@ void clear_message()
   move(LAST_LINE, 0);
   clrtoeol();
   message_shown = false;
+}
+
+void clear_key_sequence()
+{
+  move(LAST_LINE, COLS - KEY_SEQUENCE_DISTANCE);
+  clrtoeol();
 }
 
 void close_alternate_window() {
@@ -916,7 +1021,7 @@ void print_alternate(PACKAGE package)
     wprintw(alternate_window," %s \n", version.c_str());
     if (version == package_version) {
       wattroff(alternate_window, A_STANDOUT);
-      wattron(alternate_window, COLOR_PAIR(COLOR_OLD_VERSION));
+      wattron(alternate_window, COLOR_PAIR(COLOR_ERROR));
     }
     wattroff(alternate_window, A_STANDOUT);
     ++index;
@@ -1048,6 +1153,40 @@ string escape_slashes(string str)
 {
   regex slash ("/");
   return regex_replace(str, slash, "\\/");
+}
+
+void package_window_up()
+{
+  if (filtered_packages.size() > 0) {
+    selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
+  }
+}
+
+void package_window_down()
+{
+  if (filtered_packages.size() > 0) {
+    selected_package = (selected_package + 1) % filtered_packages.size();
+  }
+}
+
+void alternate_window_up()
+{
+  selected_alternate_row = max(selected_alternate_row - 1, 0);
+  if (alternate_rows.at(selected_alternate_row) == "") {
+    selected_alternate_row = max(selected_alternate_row - 1, 0);
+  }
+
+  print_alternate(filtered_packages.at(selected_package));
+}
+
+void alternate_window_down()
+{
+  selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
+  if (alternate_rows.at(selected_alternate_row) == "") {
+    selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
+  }
+
+  print_alternate(filtered_packages.at(selected_package));
 }
 
 const char* alternate_mode_to_string()
