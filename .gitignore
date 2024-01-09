@@ -3,3 +3,4 @@ build/
 log
 package*.json
 npm-review
+*.dSYM/*
