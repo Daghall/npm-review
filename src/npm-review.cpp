@@ -112,10 +112,10 @@ int main(int argc, const char *argv[])
     read_packages(&max_length);
   }
 
-  // TODO: Handle resize
   // TODO: Sorting?
   // TODO: Cache stuff?
   // TODO: Help screen
+  // TODO: Search in alternate window? N/P/n/p navigation?
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, COLS);
@@ -232,18 +232,17 @@ int main(int argc, const char *argv[])
     }
 
     // Refresh windows
-    debug("Refresh main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
-    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS / 2 - 2);
-    if (alternate_window) {
-      debug("Refresh alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT - 1, start_alternate);
+    debug("Refreshing main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
+    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS - 1);
 
-      for (int i = 0; i < LIST_HEIGHT; ++i) {
-        move(i, COLS / 2);
-        clrtoeol();
-      }
+    if (alternate_window) {
+      debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT - 1, start_alternate);
+
       refresh();
 
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
+
+      render_alternate_window_border();
     }
 
     if (list_versions) {
@@ -257,6 +256,13 @@ int main(int argc, const char *argv[])
     }
 
     const short character = getch();
+
+    if (character == KEY_RESIZE) {
+     clear();
+     // TODO: Warn about too small screen? 44 seems to be minimum width
+     debug("Resizing... Columns: %d, Lines: %d\n", COLS, LINES);
+     continue;
+    }
 
     if (key_sequence.length() > 0) {
       debug("Key sequence: %s%c\n", key_sequence.c_str(), (char) character);
@@ -686,7 +692,7 @@ void print_versions(PACKAGE package, int alternate_row) {
 
 void get_dependencies(PACKAGE package, bool init)
 {
-  init_alternate_window(init);
+  init_alternate_window();
 
   string package_name = escape_slashes(package.name);
   char command[1024];
@@ -777,18 +783,18 @@ void get_info(PACKAGE package)
   print_alternate(package);
 }
 
-void init_alternate_window(bool clear_window)
+void init_alternate_window()
 {
-  print_package_bar(true);
-  attron(COLOR_PAIR(COLOR_INFO_BAR));
+  // Clear window
   for (int i = 0; i < LIST_HEIGHT; ++i) {
-    if (clear_window) {
-      move(i, COLS / 2 - 1);
-      clrtoeol();
-    }
-    mvprintw(i, COLS / 2 - 1, "│");
+    move(i, COLS / 2);
+    clrtoeol();
   }
 
+  render_alternate_window_border();
+
+  print_package_bar(true);
+  attron(COLOR_PAIR(COLOR_INFO_BAR));
   mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│");
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
   refresh();
@@ -842,7 +848,7 @@ void get_all_versions()
   string message = "Checking versions for \"" + package.name + "\"";
   show_message(message.c_str());
   print_alternate(package);
-  prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
+  prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
 
   vector<string> versions = get_versions(package);
   string current_major = get_major(package.version);
@@ -993,7 +999,6 @@ bool confirm(string message)
 }
 
 // TODO: Color unmet deps?
-// TODO: Handle pad size when rows exceed one row
 void print_alternate(PACKAGE package)
 {
   if (alternate_window) {
@@ -1004,7 +1009,7 @@ void print_alternate(PACKAGE package)
   string package_version = package.version;
   const int alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
   size_t index = 0;
-  alternate_window = newpad(alternate_length, COLS / 2);
+  alternate_window = newpad(alternate_length, 1024);
 
   debug("Number of alternate items: %d\n", alternate_length);
 
@@ -1187,6 +1192,15 @@ void alternate_window_down()
   }
 
   print_alternate(filtered_packages.at(selected_package));
+}
+
+void render_alternate_window_border()
+{
+  attron(COLOR_PAIR(COLOR_INFO_BAR));
+  for (int i = 0; i < LIST_HEIGHT; ++i) {
+    mvprintw(i, COLS / 2 - 1, "│");
+  }
+  attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
 const char* alternate_mode_to_string()

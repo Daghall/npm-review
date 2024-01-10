@@ -136,7 +136,6 @@ npm-review
 ## Caveats
 
 - Error handling is **minimal**
-- Resizing terminal breaks rendering
 
 ## Development
 
