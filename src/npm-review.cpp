@@ -56,6 +56,7 @@ USHORT start_packages = 0;
 
 enum alternate_modes alternate_mode;
 bool show_sub_dependencies = false;
+bool refresh_packages = true;
 
 bool list_versions = false;
 bool search_mode = false;
@@ -116,9 +117,11 @@ int main(int argc, const char *argv[])
   // TODO: Cache stuff?
   // TODO: Help screen
   // TODO: Search in alternate window? N/P/n/p navigation?
+  // TODO: Timeout on network requests?
+  // TODO: "Undo" – install original version
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
-  package_window = newpad(number_of_packages, COLS);
+  package_window = newpad(number_of_packages, 1024);
   debug("Number of packages: %d\n", number_of_packages);
 
   string key_sequence = "";
@@ -164,7 +167,7 @@ int main(int argc, const char *argv[])
       if (package_index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
       }
-      wprintw(package_window, " %-*s  %-*s%s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), package.is_dev ? "  (DEV)" : "");
+      wprintw(package_window, " %-*s  %-*s%-*s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
       ++package_index;
     });
 
@@ -231,18 +234,27 @@ int main(int argc, const char *argv[])
       refresh();
     }
 
-    // Refresh windows
-    debug("Refreshing main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
-    prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS - 1);
+    // Refresh package window
+    if (refresh_packages) {
+      debug("Refreshing main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
 
+      if (alternate_window) {
+        // Only refresh the part that is visible
+        prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS / 2 - 2);
+        render_alternate_window_border();
+      } else {
+        prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS - 1);
+      }
+
+      refresh_packages = false;
+    }
+
+    // Refresh alternate window
     if (alternate_window) {
       debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT - 1, start_alternate);
 
       refresh();
-
-      prefresh(alternate_window, start_alternate, 0, 0, COLS / 2 + 1, LIST_HEIGHT - 1 , COLS - 1);
-
-      render_alternate_window_border();
+      prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
     }
 
     if (list_versions) {
@@ -251,7 +263,10 @@ int main(int argc, const char *argv[])
       getch_blocking_mode(false);
       if (list_versions && getch() == ctrl('c')) {
         list_versions = false;
-        show_message("Aborted");
+        show_message("Aborted version check", COLOR_ERROR);
+        getch_blocking_mode(true);
+        print_alternate(pkgs.at(selected_package));
+        continue;
       }
     }
 
@@ -261,7 +276,11 @@ int main(int argc, const char *argv[])
      clear();
      // TODO: Warn about too small screen? 44 seems to be minimum width
      debug("Resizing... Columns: %d, Lines: %d\n", COLS, LINES);
+     refresh_packages = true;
      continue;
+    } else if (character == ERR) {
+      getch_blocking_mode(true);
+      continue;
     }
 
     if (key_sequence.length() > 0) {
@@ -337,6 +356,7 @@ int main(int argc, const char *argv[])
         switch (character) {
           case 'g':
             selected_package = 0;
+            refresh_packages = true;
             break;
           case 'j':
             package_window_down();
@@ -356,6 +376,7 @@ int main(int argc, const char *argv[])
 
     if (search_mode) {
       debug("Sending key '%c' (%#x) to search\n", character, character);
+      refresh_packages = true;
 
       switch (character) {
         case ctrl('c'):
@@ -405,21 +426,18 @@ int main(int argc, const char *argv[])
       clear_message();
 
       switch (character) {
-        case ERR:
-          getch_blocking_mode(true);
-          break;
         case ctrl('z'):
           raise(SIGTSTP);
           break;
         case KEY_DOWN:
         case 'J':
-          selected_package = (selected_package + 1) % filtered_packages.size();
+          package_window_down();
           change_alternate_window();
           start_alternate = 0;
           break;
         case KEY_UP:
         case 'K':
-          selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
+          package_window_up();
           change_alternate_window();
           start_alternate = 0;
           break;
@@ -428,6 +446,7 @@ int main(int argc, const char *argv[])
 
           if (alternate_mode == VERSION_CHECK) {
             selected_package = selected_alternate_row;
+            refresh_packages = true;
           }
           break;
         case 'k':
@@ -435,6 +454,7 @@ int main(int argc, const char *argv[])
 
           if (alternate_mode == VERSION_CHECK) {
             selected_package = selected_alternate_row;
+            refresh_packages = true;
           }
           break;
         case ctrl('e'):
@@ -509,9 +529,6 @@ int main(int argc, const char *argv[])
       clear_message();
 
       switch (character) {
-        case ERR:
-          getch_blocking_mode(true);
-          break;
         case ctrl('z'):
           raise(SIGTSTP);
           break;
@@ -558,6 +575,7 @@ int main(int argc, const char *argv[])
           break;
         case 'G':
           selected_package = number_of_packages - 1;
+          refresh_packages = true;
           break;
         case '/':
           search_mode = true;
@@ -568,6 +586,7 @@ int main(int argc, const char *argv[])
         case 'V':
           selected_package = 0;
           selected_alternate_row = 0;
+          refresh_packages = true;
           list_versions = true;
           break;
       }
@@ -832,6 +851,8 @@ void install_package(PACKAGE package, const string new_version)
   show_message("Installed \"" + package.name + "@" + new_version + "\"");
 }
 
+// This function is called once per package, in the main loop,
+// to make canceling possible.
 void get_all_versions()
 {
   if (selected_package == 0) {
@@ -839,8 +860,9 @@ void get_all_versions()
     alternate_rows.clear();
     alternate_mode = VERSION_CHECK;
     selected_alternate_row = 0;
+
     for_each(filtered_packages.begin(), filtered_packages.end(), [](PACKAGE package) {
-      alternate_rows.push_back("Pending...             ");
+      alternate_rows.push_back("Pending...");
     });
   }
 
@@ -849,6 +871,7 @@ void get_all_versions()
   show_message(message.c_str());
   print_alternate(package);
   prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
+  refresh_packages = true;
 
   vector<string> versions = get_versions(package);
   string current_major = get_major(package.version);
@@ -878,13 +901,13 @@ void get_all_versions()
   snprintf(formatted_string, 128, " %6s %-14s ", version_string.c_str(), major_string.c_str());
 
   alternate_rows.at(selected_package) = formatted_string;
-  print_alternate(package);
 
   if (++selected_package >= filtered_packages.size()) {
     list_versions = false;
     clear_message();
+    print_alternate(pkgs.at(selected_package - 1));
   } else {
-    selected_alternate_row = selected_package - 0;
+    selected_alternate_row = selected_package;
   }
 }
 
@@ -976,6 +999,7 @@ void close_alternate_window() {
     clrtoeol();
   }
   refresh();
+  refresh_packages = true;
 }
 
 bool confirm(string message)
@@ -1023,7 +1047,7 @@ void print_alternate(PACKAGE package)
     if (selected_alternate_row == index) {
       wattron(alternate_window, A_STANDOUT);
     }
-    wprintw(alternate_window," %s \n", version.c_str());
+    wprintw(alternate_window," %-*s \n", 512, version.c_str());
     if (version == package_version) {
       wattroff(alternate_window, A_STANDOUT);
       wattron(alternate_window, COLOR_PAIR(COLOR_ERROR));
@@ -1164,6 +1188,7 @@ void package_window_up()
 {
   if (filtered_packages.size() > 0) {
     selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
+    refresh_packages = true;
   }
 }
 
@@ -1171,6 +1196,7 @@ void package_window_down()
 {
   if (filtered_packages.size() > 0) {
     selected_package = (selected_package + 1) % filtered_packages.size();
+    refresh_packages = true;
   }
 }
 
