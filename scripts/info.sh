@@ -14,12 +14,10 @@ version=$(
 # script standalone as compiled into the binary, since newlines are
 # removed in the Makefile.
 
-# TODO Handle .license being an object
-
 # SCRIPT
 npm info $package --json 2> /dev/null | \
  jq -r '"
-\(.name) | \(.license)<BR>
+\(.name) | \(.license.type? // .license)<BR>
 \(.description)<BR><BR>
 
 CURRENT<BR>
