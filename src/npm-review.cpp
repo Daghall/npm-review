@@ -183,8 +183,6 @@ int main(int argc, const char *argv[])
     }
 
     // Alternate scrolling
-    const USHORT alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
-
     if (selected_alternate_row <= 0) {
       start_alternate = 0;
     } else if (selected_alternate_row >= LIST_HEIGHT + start_alternate) {

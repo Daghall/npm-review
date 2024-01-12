@@ -3,7 +3,7 @@
 all: build
 
 build: includes src/npm-review.cpp src/npm-review.h
-	g++ -std=c++11 -lncurses $(CFLAGS) src/npm-review.cpp -o npm-review
+	g++ -std=c++11 -Wall -Werror -lncurses $(CFLAGS) src/npm-review.cpp -o npm-review
 
 install: build
 	cp npm-review /usr/local/bin
