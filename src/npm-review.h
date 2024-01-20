@@ -1,10 +1,11 @@
+#include <map>
 #include <string>
 #include <vector>
 
 using namespace std;
 
 // Types
-//
+
 typedef unsigned short USHORT;
 
 typedef struct {
@@ -26,7 +27,13 @@ enum alternate_modes {
   VERSION_CHECK,
 };
 
-// Consants
+#define CACHE_TYPE string, vector<string>
+typedef pair<CACHE_TYPE> cache_item;
+typedef map<CACHE_TYPE> cache_type;
+
+
+// Constants
+
 const USHORT COLOR_DEFAULT = -1;
 const USHORT COLOR_SELECTED_PACKAGE = 1;
 const USHORT COLOR_PACKAGE = 2;
@@ -39,9 +46,12 @@ const USHORT KEY_SEQUENCE_DISTANCE = 10;
 const USHORT KEY_ESC = 0x1B;
 const USHORT KEY_DELETE = 0x7F;
 
+const USHORT COMMAND_SIZE = 1024;
+
 #define STR(x) #x
 
 // Functions
+
 void initialize();
 void read_packages(MAX_LENGTH *foo);
 vector<string> split_string(string package_string);
@@ -49,6 +59,8 @@ vector<string> shell_command(const string);
 void print_alternate(PACKAGE package);
 vector<string> get_versions(PACKAGE package);
 void print_versions(PACKAGE package, int alternate_row = -1);
+map<CACHE_TYPE>* get_cache();
+vector<string> get_from_cache(string package_name, char* command);
 void get_dependencies(PACKAGE package, bool init = true);
 void get_info(PACKAGE package);
 void get_all_versions();
@@ -59,7 +71,7 @@ void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
 int sync_shell_command(const string command, std::function<void(char*)> callback);
-void init_alternate_window();
+void init_alternate_window(bool show_loading_message = false);
 void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);
 bool confirm(string message);

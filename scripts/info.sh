@@ -14,6 +14,9 @@ version=$(
 # script standalone as compiled into the binary, since newlines are
 # removed in the Makefile.
 
+# TODO: Handle invalid installations. For example:
+# datadog-metrics               0.11.0 invalid: "~0.11.1" from the root project
+
 # SCRIPT
 npm info $package --json 2> /dev/null | \
  jq -r '"

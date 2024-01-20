@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include <curses.h>
+#include <map>
 #include <signal.h>
 #include <functional>
 #include <iterator>
@@ -36,7 +37,7 @@ FILE *debug_log = NULL;
 }
 bool fake_http_requests = false;
 
-// Constants
+// "Constants"
 #define LIST_HEIGHT   (USHORT)(LINES - BOTTOM_BAR_HEIGHT)
 #define LAST_LINE     (USHORT)(LINES - 1)
 #define ctrl(c)       (c & 0x1f)
@@ -65,6 +66,10 @@ string search_string = "";
 string regex_parse_error;
 string package_bar_info;
 
+// Caching
+cache_type dependency_cache;
+cache_type info_cache;
+cache_type version_cache;
 
 int main(int argc, const char *argv[])
 {
@@ -114,11 +119,15 @@ int main(int argc, const char *argv[])
   }
 
   // TODO: Sorting?
-  // TODO: Cache stuff?
+  // TODO: Cache "views"
   // TODO: Help screen
   // TODO: Search in alternate window? N/P/n/p navigation?
   // TODO: Timeout on network requests?
   // TODO: "Undo" – install original version
+  // TODO: zt, zz, zb
+  // TODO: ctrl-d/-u?
+  // TODO: Clear cache and reload from network/disk on ctrl-l
+
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
   package_window = newpad(number_of_packages, 1024);
@@ -632,7 +641,7 @@ vector<string> split_string(string package_string)
 
 void read_packages(MAX_LENGTH *max_length)
 {
-  debug("read_packages\n");
+  debug("Reading packages\n");
   string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r 2> /dev/null < package.json; done";
   vector<string> packages = shell_command(command);
   pkgs.clear();
@@ -659,16 +668,13 @@ void read_packages(MAX_LENGTH *max_length)
 
 vector<string> get_versions(PACKAGE package)
 {
-  const char* package_name = package.name.c_str();
-  char command[1024];
+  char command[COMMAND_SIZE];
   // TODO: Break out to script file:
-  snprintf(command, 1024, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package_name);
-  return shell_command(command);
+  snprintf(command, COMMAND_SIZE, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package.name.c_str());
+  return get_from_cache(package.name, command);
 }
 
 void print_versions(PACKAGE package, int alternate_row) {
-  init_alternate_window();
-
   selected_alternate_row = alternate_row;
 
 
@@ -707,13 +713,47 @@ void print_versions(PACKAGE package, int alternate_row) {
   print_alternate(package);
 }
 
+cache_type* get_cache() {
+  switch (alternate_mode) {
+    case DEPENDENCIES:
+      return &dependency_cache;
+        break;
+    case INFO:
+      return &info_cache;
+    case VERSION:
+    case VERSION_CHECK:
+      return &version_cache;
+        break;
+  }
+}
+
+vector<string> get_from_cache(string package_name, char* command)
+{
+  cache_type *cache = get_cache();
+
+  if (!cache) return vector<string>();
+
+  cache_type::iterator cache_data = (*cache).find(package_name);
+
+  if (cache_data != (*cache).end()) {
+    debug("Cache HIT for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string());
+    // TODO: This feels inappropriate here. Clean it up
+    init_alternate_window();
+  } else {
+    debug("Cache MISS for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string());
+    // TODO: This feels inappropriate here. Clean it up
+    if (alternate_mode != VERSION_CHECK) {
+      init_alternate_window(true);
+    }
+    cache_data = (*cache).insert((*cache).begin(), cache_item (package_name, shell_command(command)));
+  }
+
+  return cache_data->second;
+}
+
 void get_dependencies(PACKAGE package, bool init)
 {
-  init_alternate_window();
-
   string package_name = escape_slashes(package.name);
-  char command[1024];
-  snprintf(command, 1024, DEPENDENCIES_STRING, package_name.c_str(), show_sub_dependencies ? "^$" : "^[│ ]");
   string selected;
 
   if (!init) {
@@ -748,26 +788,30 @@ void get_dependencies(PACKAGE package, bool init)
       alternate_rows.push_back("  └── wordwrap          1.0.0");
     }
   } else { // }}}
-    alternate_rows = shell_command(command);
+    char command[COMMAND_SIZE];
+    snprintf(command, COMMAND_SIZE, DEPENDENCIES_STRING, package_name.c_str(), "^$");
+    vector<string> dependency_data = get_from_cache(package_name, command);
+
+    if (show_sub_dependencies) {
+      alternate_rows = dependency_data;
+    } else {
+      regex sub_dependency_regex ("^(│| )");
+      alternate_rows.clear();
+      copy_if(dependency_data.begin(), dependency_data.end(), back_inserter(alternate_rows), [&sub_dependency_regex](string dependency) {
+        return !regex_search(dependency, sub_dependency_regex);
+      });
+    }
   }
 
   selected_alternate_row = 0;
-
-  if (!init) {
-    select_dependency_node(selected);
-  }
-
+  select_dependency_node(selected);
   print_alternate(package);
 }
 
 void get_info(PACKAGE package)
 {
-  init_alternate_window();
-
   string package_name = escape_slashes(package.name);
   const char*  package_version = package.version.c_str();
-  char command[1024];
-  snprintf(command, 1024, INFO_STRING, package_name.c_str(), package_version, package_version);
 
   if (fake_http_requests) { // {{{1
     alternate_rows.clear();
@@ -794,13 +838,15 @@ void get_info(PACKAGE package)
     alternate_rows.push_back("KEYWORDS");
     alternate_rows.push_back("express, express3, handlebars, view, layout, partials, templates");
   } else { // }}}
-    alternate_rows = shell_command(command);
+    char command[COMMAND_SIZE];
+    snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), package_version, package_version);
+    alternate_rows = get_from_cache(package_name, command);
   }
   selected_alternate_row = 0;
   print_alternate(package);
 }
 
-void init_alternate_window()
+void init_alternate_window(bool show_loading_message)
 {
   // Clear window
   for (int i = 0; i < LIST_HEIGHT; ++i) {
@@ -816,19 +862,29 @@ void init_alternate_window()
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
   refresh();
 
-  attron(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
-  mvprintw(0, COLS - 13, " Loading... ");
-  attroff(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
-  refresh();
+  if (show_loading_message) {
+    attron(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
+    mvprintw(0, COLS - 13, " Loading... ");
+    attroff(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
+    refresh();
+  }
 }
 
 void install_package(PACKAGE package, const string new_version)
 {
   // Move to last line to make `npm install` render here
-  show_message("Installing \"" + package.name + "@" + new_version + "\"");
+  show_message("");
 
-  char command[1024];
-  snprintf(command, 1024, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
+  for_each(dependency_cache.begin(), dependency_cache.end(), [](cache_item item) {
+      debug("  key: %s\n", item.first.c_str());
+  });
+
+  // TODO: Handle names with slashes
+  dependency_cache.erase(package.name);
+  info_cache.erase(package.name);
+
+  char command[COMMAND_SIZE];
+  snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
   int exit_code = sync_shell_command(command, [](char* line) {
     debug("NPM INSTALL: %s\n", line);
   });
@@ -880,7 +936,7 @@ void get_all_versions()
   });
 
   int versions_behind = distance(first_of_current, find(versions.begin(), versions.end(), package.version));
-  debug("%s: versions behind: %d – current major: %s, latest major: %s, latest version: %s\n", package.name.c_str(), versions_behind, current_major.c_str(), latest_major.c_str(), versions.at(0).c_str());
+  debug("\"%s\": versions behind: %d – current major: %s, latest major: %s, latest version: %s\n", package.name.c_str(), versions_behind, current_major.c_str(), latest_major.c_str(), versions.at(0).c_str());
 
   string version_string = "";
   if (versions_behind > 0) {
@@ -922,9 +978,9 @@ void uninstall_package(PACKAGE package)
     return;
   }
 
-  char command[1024];
+  char command[COMMAND_SIZE];
+  snprintf(command, COMMAND_SIZE, "npm uninstall %s --silent", package.name.c_str());
 
-  snprintf(command, 1024, "npm uninstall %s --silent", package.name.c_str());
   int exit_code = sync_shell_command(command, [](char* line) {
     debug("NPM UNINSTALL: %s\n", line);
   });
@@ -1033,7 +1089,7 @@ void print_alternate(PACKAGE package)
   size_t index = 0;
   alternate_window = newpad(alternate_length, 1024);
 
-  debug("Number of alternate items: %d\n", alternate_length);
+  debug("Number of alternate items/rows: %zu/%d\n", alternate_rows.size(), alternate_length);
 
   for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index](string &version) {
     if (version == package_version) {
@@ -1115,6 +1171,8 @@ string find_dependency_root()
 
 void select_dependency_node(string &selected)
 {
+  if (selected == "") return;
+
   int size = alternate_rows.size();
   int selected_length = selected.length();
   string row;
@@ -1131,7 +1189,7 @@ void select_dependency_node(string &selected)
 vector<string> shell_command(const string command)
 {
   vector<string> result;
-  char buffer[1024];
+  char buffer[COMMAND_SIZE];
   FILE *output = popen(command.c_str(), "r");
 
   debug("Executing \"%s\"\n", command.c_str());
@@ -1148,7 +1206,7 @@ vector<string> shell_command(const string command)
 
 int sync_shell_command(const string command, std::function<void(char*)> callback)
 {
-  char buffer[1024];
+  char buffer[COMMAND_SIZE];
   FILE *output = popen(command.c_str(), "r");
   setvbuf(output, buffer, _IOLBF, sizeof(buffer));
 
