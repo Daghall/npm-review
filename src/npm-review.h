@@ -43,14 +43,24 @@ const USHORT COLOR_INFO_BAR = 5;
 
 const USHORT BOTTOM_BAR_HEIGHT = 2;
 const USHORT KEY_SEQUENCE_DISTANCE = 10;
+
 const USHORT KEY_ESC = 0x1B;
 const USHORT KEY_DELETE = 0x7F;
 
 const USHORT COMMAND_SIZE = 1024;
 
+// Stringify, used in the Makefile to build include files
 #define STR(x) #x
 
 // Functions
+
+// Simple "hash" function to convert a string of [a-z] characters into an int,
+// to be used in a switch. Long strings will overflow!
+constexpr int H(const char* str, int sum = 0) {
+  return *str
+    ? H(str + 1, (*str - 0x60) + sum * 0x1a)
+    : sum;
+}
 
 void initialize();
 void read_packages(MAX_LENGTH *foo);

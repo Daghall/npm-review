@@ -291,15 +291,16 @@ int main(int argc, const char *argv[])
     }
 
     if (key_sequence.length() > 0) {
-      debug("Key sequence: %s%c\n", key_sequence.c_str(), (char) character);
+      key_sequence += character;
+      debug("Key sequence: %s\n", key_sequence.c_str());
 
       if (alternate_window) {
-        switch (character) {
-          case 'g':
+        switch (H(key_sequence.c_str())) {
+          case H("gg"):
             selected_alternate_row = 0;
             print_alternate(filtered_packages.at(selected_package));
             break;
-          case 'c':
+          case H("gc"):
             {
               if (alternate_mode != VERSION) {
                 debug("Key sequence ignored, inapplicable mode\n");
@@ -311,7 +312,7 @@ int main(int argc, const char *argv[])
               print_alternate(filtered_packages.at(selected_package));
               break;
             }
-          case 'j':
+          case H("gj"):
             {
               if (alternate_mode != VERSION) {
                 debug("Key sequence interpreted as 'j'\n");
@@ -334,7 +335,7 @@ int main(int argc, const char *argv[])
               print_alternate(filtered_packages.at(selected_package));
               break;
             }
-          case 'k':
+          case H("gk"):
             {
               if (alternate_mode != VERSION) {
                 debug("Key sequence interpreted as 'k'\n");
@@ -361,14 +362,14 @@ int main(int argc, const char *argv[])
         }
       } else { // Package window
         switch (character) {
-          case 'g':
+          case H("gg"):
             selected_package = 0;
             refresh_packages = true;
             break;
-          case 'j':
+          case H("gj"):
             package_window_down();
             break;
-          case 'k':
+          case H("gk"):
             package_window_up();
             break;
           default:
