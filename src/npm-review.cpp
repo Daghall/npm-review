@@ -259,6 +259,13 @@ int main(int argc, const char *argv[])
     if (alternate_window) {
       debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
 
+      // Clear the window to remove residual lines when refreshing pad smaller
+      // than the full width
+      for (int i = 1; i < LIST_HEIGHT; ++i) {
+        move(i, COLS / 2);
+        clrtoeol();
+      }
+
       refresh();
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
     }
@@ -690,6 +697,7 @@ void print_versions(PACKAGE package, int alternate_row) {
 
 
   if (fake_http_requests) { // {{{1
+    render_alternate_window_border();
     alternate_rows.clear();
     alternate_rows.push_back("5.1.1");
     alternate_rows.push_back("5.1.0");
@@ -772,6 +780,7 @@ void get_dependencies(PACKAGE package, bool init)
   }
 
   if (fake_http_requests) { // {{{1
+    render_alternate_window_border();
     alternate_rows.clear();
     if (!show_sub_dependencies) {
       alternate_rows.push_back("┬ express-handlebars    5.3.5");
@@ -825,6 +834,7 @@ void get_info(PACKAGE package)
   const char*  package_version = package.version.c_str();
 
   if (fake_http_requests) { // {{{1
+    render_alternate_window_border();
     alternate_rows.clear();
     alternate_rows.push_back("express-handlebars | BSD-3-Clause");
     alternate_rows.push_back("A Handlebars view engine for Express which doesn't suck.");
