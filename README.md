@@ -15,8 +15,8 @@ Heavily inspired by [tig](https://github.com/jonas/tig).
 
 The active window is the _alternate_ window, if it is displayed, _package_ window otherwise.
 
-| Key   | Command |
-| ----- | ------- |
+| Key(s)  | Action |
+| ------- | ------- |
 |      `j`  | Move cursor down in the active window |
 |      `k`  | Move cursor up in the active window |
 | `J` or ⬇️  | Move cursor down in the _package_ window |
@@ -35,6 +35,9 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |     `gk`  | Move to the next **higher** major _version_ (or up) |
 |     `gc`  | Move to the currently installed _version_ (or no-op) |
 |      `G`  | Move to the last item in the active window |
+|     `zt`  | Move the selected _alternate_ row to the top |
+|     `zz`  | Move the selected _alternate_ row to the middle |
+|     `zb`  | Move the selected _alternate_ row to the bottom |
 |      `/`  | Start regex filtering in the _package_ window |
 | `ctrl-e`  | Scroll the _alternative_ window up |
 | `ctrl-y`  | Scroll the _alternative_ window down |

@@ -124,7 +124,6 @@ int main(int argc, const char *argv[])
   // TODO: Search in alternate window? N/P/n/p navigation?
   // TODO: Timeout on network requests?
   // TODO: "Undo" – install original version
-  // TODO: zt, zz, zb
   // TODO: ctrl-d/-u?
   // TODO: Clear cache and reload from network/disk on ctrl-l
 
@@ -258,7 +257,7 @@ int main(int argc, const char *argv[])
 
     // Refresh alternate window
     if (alternate_window) {
-      debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT - 1, start_alternate);
+      debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
 
       refresh();
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
@@ -292,7 +291,7 @@ int main(int argc, const char *argv[])
 
     if (key_sequence.length() > 0) {
       key_sequence += character;
-      debug("Key sequence: %s\n", key_sequence.c_str());
+      debug("Key sequence: %s (%d)\n", key_sequence.c_str(), H(key_sequence.c_str()));
 
       if (alternate_window) {
         switch (H(key_sequence.c_str())) {
@@ -357,11 +356,20 @@ int main(int argc, const char *argv[])
               print_alternate(filtered_packages.at(selected_package));
               break;
             }
+          case H("zt"):
+            start_alternate = selected_alternate_row;
+            break;
+          case H("zz"):
+            start_alternate = max(0, selected_alternate_row - LIST_HEIGHT / 2);
+            break;
+          case H("zb"):
+            start_alternate = max(0, selected_alternate_row - LIST_HEIGHT);
+            break;
           default:
-            debug("Unrecognized sequence\n");
+            debug("Unrecognized sequence (%d)\n", H(key_sequence.c_str()));
         }
       } else { // Package window
-        switch (character) {
+        switch (H(key_sequence.c_str())) {
           case H("gg"):
             selected_package = 0;
             refresh_packages = true;
@@ -524,6 +532,7 @@ int main(int argc, const char *argv[])
           }
           break;
         case 'g':
+        case 'z':
           key_sequence = character;
           show_key_sequence(key_sequence);
           break;
@@ -577,6 +586,7 @@ int main(int argc, const char *argv[])
         case 'q':
         case 'Q':
           return exit();
+        case 'z':
         case 'g':
           key_sequence = character;
           show_key_sequence(key_sequence);
