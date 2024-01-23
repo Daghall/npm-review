@@ -305,6 +305,11 @@ int main(int argc, const char *argv[])
           case H("gg"):
             selected_alternate_row = 0;
             print_alternate(filtered_packages.at(selected_package));
+
+            if (alternate_mode == VERSION_CHECK) {
+              selected_package = selected_alternate_row;
+              refresh_packages = true;
+            }
             break;
           case H("gc"):
             {
@@ -546,6 +551,11 @@ int main(int argc, const char *argv[])
         case 'G':
           selected_alternate_row = (int) alternate_rows.size() - 1;
           print_alternate(filtered_packages.at(selected_package));
+
+          if (alternate_mode == VERSION_CHECK) {
+            selected_package = selected_alternate_row;
+            refresh_packages = true;
+          }
           break;
       }
     } else { // Package window
