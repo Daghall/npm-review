@@ -284,7 +284,7 @@ int main(int argc, const char *argv[])
         list_versions = false;
         show_message("Aborted version check", COLOR_ERROR);
         getch_blocking_mode(true);
-        print_alternate(pkgs.at(selected_package));
+        print_alternate(&pkgs.at(selected_package));
         continue;
       }
     }
@@ -310,7 +310,7 @@ int main(int argc, const char *argv[])
         switch (H(key_sequence.c_str())) {
           case H("gg"):
             selected_alternate_row = 0;
-            print_alternate(filtered_packages.at(selected_package));
+            print_alternate();
 
             if (alternate_mode == VERSION_CHECK) {
               selected_package = selected_alternate_row;
@@ -326,7 +326,7 @@ int main(int argc, const char *argv[])
 
               vector<string>::iterator current = find(alternate_rows.begin(), alternate_rows.end(), filtered_packages.at(selected_package).version);
               selected_alternate_row = distance(current, alternate_rows.begin());
-              print_alternate(filtered_packages.at(selected_package));
+              print_alternate();
               break;
             }
           case H("gj"):
@@ -349,7 +349,7 @@ int main(int argc, const char *argv[])
                 selected_alternate_row = distance(alternate_rows.begin(), next_major);
               }
 
-              print_alternate(filtered_packages.at(selected_package));
+              print_alternate();
               break;
             }
           case H("gk"):
@@ -371,7 +371,7 @@ int main(int argc, const char *argv[])
                 selected_alternate_row = distance(previous_major, alternate_rows.rend() - 1);
               }
 
-              print_alternate(filtered_packages.at(selected_package));
+              print_alternate();
               break;
             }
           case H("zt"):
@@ -525,7 +525,7 @@ int main(int argc, const char *argv[])
             refresh_packages = true;
           }
 
-          print_alternate(filtered_packages.at(selected_package));
+          print_alternate();
           break;
         case ctrl('u'):
           start_alternate = max(start_alternate - LIST_HEIGHT / 2, 0);
@@ -537,7 +537,7 @@ int main(int argc, const char *argv[])
             selected_package = selected_alternate_row;
             refresh_packages = true;
           }
-          print_alternate(filtered_packages.at(selected_package));
+          print_alternate();
           break;
         case 'h':
           if (alternate_mode == DEPENDENCIES) {
@@ -582,7 +582,7 @@ int main(int argc, const char *argv[])
           break;
         case 'G':
           selected_alternate_row = (int) alternate_rows.size() - 1;
-          print_alternate(filtered_packages.at(selected_package));
+          print_alternate();
 
           if (alternate_mode == VERSION_CHECK) {
             selected_package = selected_alternate_row;
@@ -770,7 +770,7 @@ vector<string> get_versions(PACKAGE package)
 void print_versions(PACKAGE package, int alternate_row) {
   selected_alternate_row = alternate_row;
   alternate_rows = get_versions(package);
-  print_alternate(package);
+  print_alternate(&package);
 }
 
 cache_type* get_cache() {
@@ -866,7 +866,7 @@ void get_dependencies(PACKAGE package, bool init)
 
   selected_alternate_row = 0;
   select_dependency_node(selected);
-  print_alternate(package);
+  print_alternate(&package);
 }
 
 void get_info(PACKAGE package)
@@ -905,7 +905,7 @@ void get_info(PACKAGE package)
     alternate_rows = get_from_cache(package_name, command);
   }
   selected_alternate_row = 0;
-  print_alternate(package);
+  print_alternate(&package);
 }
 
 void init_alternate_window(bool show_loading_message)
@@ -956,9 +956,9 @@ void install_package(PACKAGE package, const string new_version)
   if (exit_code == OK) {
     read_packages(NULL);
     selected_alternate_row = -1;
-    PACKAGE p = filtered_packages.at(selected_package);
-    p.version = new_version;
-    print_alternate(p);
+    PACKAGE package = filtered_packages.at(selected_package);
+    package.version = new_version;
+    print_alternate(&package);
   } else {
     // TODO: Handle error
     debug("Install failed\n");
@@ -985,7 +985,7 @@ void get_all_versions()
   PACKAGE package = filtered_packages.at(selected_package);
   string message = "Checking versions for \"" + package.name + "\"";
   show_message(message.c_str());
-  print_alternate(package);
+  print_alternate(&package);
   prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
   refresh_packages = true;
 
@@ -1021,7 +1021,7 @@ void get_all_versions()
   if (++selected_package >= filtered_packages.size()) {
     list_versions = false;
     clear_message();
-    print_alternate(pkgs.at(selected_package - 1));
+    print_alternate(&pkgs.at(selected_package - 1));
   } else {
     selected_alternate_row = selected_package;
   }
@@ -1139,14 +1139,18 @@ bool confirm(string message)
 }
 
 // TODO: Color unmet deps?
-void print_alternate(PACKAGE package)
+void print_alternate(PACKAGE *package)
 {
   if (alternate_window) {
     wclear(alternate_window);
     delwin(alternate_window);
   }
 
-  string package_version = package.version;
+  if (package == nullptr) {
+    package = &filtered_packages.at(selected_package);
+  }
+
+  string package_version = package->version;
   const int alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
   size_t index = 0;
   alternate_window = newpad(alternate_length, 1024);
@@ -1188,7 +1192,7 @@ void change_alternate_window()
     break;
   case VERSION_CHECK:
     selected_alternate_row = selected_package;
-    print_alternate(filtered_packages.at(selected_package));
+    print_alternate();
     break;
   }
 }
@@ -1213,7 +1217,7 @@ void skip_empty_rows(USHORT &start_alternate, short adjustment)
     selected_alternate_row += adjustment;
   }
 
-  print_alternate(filtered_packages.at(selected_package));
+  print_alternate();
 }
 
 string find_dependency_root()
@@ -1325,7 +1329,7 @@ void alternate_window_up()
     selected_alternate_row = max(selected_alternate_row - 1, 0);
   }
 
-  print_alternate(filtered_packages.at(selected_package));
+  print_alternate();
 }
 
 void alternate_window_down()
@@ -1335,7 +1339,7 @@ void alternate_window_down()
     selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
   }
 
-  print_alternate(filtered_packages.at(selected_package));
+  print_alternate();
 }
 
 void render_alternate_window_border()

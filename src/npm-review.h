@@ -66,7 +66,7 @@ void initialize();
 void read_packages(MAX_LENGTH *foo);
 vector<string> split_string(string package_string);
 vector<string> shell_command(const string);
-void print_alternate(PACKAGE package);
+void print_alternate(PACKAGE *package = nullptr);
 vector<string> get_versions(PACKAGE package);
 void print_versions(PACKAGE package, int alternate_row = -1);
 map<CACHE_TYPE>* get_cache();
