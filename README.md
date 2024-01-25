@@ -39,8 +39,10 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |     `zz`  | Move the selected _alternate_ row to the middle |
 |     `zb`  | Move the selected _alternate_ row to the bottom |
 |      `/`  | Start regex filtering in the _package_ window |
-| `ctrl-e`  | Scroll the _alternative_ window up |
-| `ctrl-y`  | Scroll the _alternative_ window down |
+| `ctrl-e`  | Scroll the active window up one row |
+| `ctrl-y`  | Scroll the active window down one row |
+| `ctrl-d`  | Scroll the active window up half a screen |
+| `ctrl-u`  | Scroll the active window down half a screen |
 
 
 ## Searching

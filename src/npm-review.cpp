@@ -124,7 +124,7 @@ int main(int argc, const char *argv[])
   // TODO: Search in alternate window? N/P/n/p navigation?
   // TODO: Timeout on network requests?
   // TODO: "Undo" – install original version
-  // TODO: Make z[tzb] and ctrl-[ey] work in package window
+  // TODO: Make z[tzb]
   // TODO: Clear cache and reload from network/disk on ctrl-l
 
   const USHORT package_size = (short) pkgs.size();
@@ -635,6 +635,39 @@ int main(int argc, const char *argv[])
           uninstall_package(package);
           break;
         }
+        case ctrl('e'):
+          ++start_packages;
+
+          if (start_packages > selected_package) {
+            selected_package = start_packages;
+          }
+          refresh_packages = true;
+          break;
+        case ctrl('y'):
+          start_packages = max(0, start_packages - 1);
+
+          if (start_packages == selected_package - LIST_HEIGHT) {
+            selected_package = start_packages + LIST_HEIGHT - 1;
+          }
+
+          refresh_packages = true;
+          break;
+        case ctrl('d'):
+          start_packages = min((size_t) start_packages + LIST_HEIGHT / 2, pkgs.size() - 1);
+
+          if (start_packages > selected_package) {
+            selected_package = min((size_t) start_packages, pkgs.size());
+          }
+          refresh_packages = true;
+          break;
+        case ctrl('u'):
+          start_packages = max(start_packages - LIST_HEIGHT / 2, 0);
+
+          if (start_packages < selected_package - LIST_HEIGHT) {
+            selected_package = start_packages + LIST_HEIGHT - 1;
+          }
+          refresh_packages = true;
+          break;
         case ctrl('c'):
         case 'q':
         case 'Q':
