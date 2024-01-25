@@ -124,7 +124,7 @@ int main(int argc, const char *argv[])
   // TODO: Search in alternate window? N/P/n/p navigation?
   // TODO: Timeout on network requests?
   // TODO: "Undo" – install original version
-  // TODO: ctrl-d/-u?
+  // TODO: Make z[tzb] and ctrl-[ey] work in package window
   // TODO: Clear cache and reload from network/disk on ctrl-l
 
   const USHORT package_size = (short) pkgs.size();
@@ -180,12 +180,12 @@ int main(int argc, const char *argv[])
     });
 
     // Package scrolling
-    if (selected_package == 0) {
+    if (selected_package <= 0) {
       start_packages = 0;
-    } else if (selected_package == number_of_filtered_packages - 1) {
-      start_packages = max(number_of_filtered_packages - LIST_HEIGHT, 0);
     } else if (selected_package >= LIST_HEIGHT + start_packages) {
-      ++start_packages;
+      start_packages = selected_package - LIST_HEIGHT + 1;
+    } else if (start_packages > selected_package) {
+      start_packages = selected_package;
     } else if (selected_package < start_packages) {
       --start_packages;
     }
@@ -234,15 +234,17 @@ int main(int argc, const char *argv[])
       attroff(COLOR_PAIR(COLOR_INFO_BAR));
     }
 
-    if (search_mode) {
-      move(LAST_LINE, search_string.length() + 1);
-    } else {
-      refresh();
-    }
-
     // Refresh package window
     if (refresh_packages) {
       debug("Refreshing main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
+
+      // Clear the window to remove residual lines when refreshing pad smaller
+      // than the full width
+      for (int i = start_packages - selected_package; i < LIST_HEIGHT; ++i) {
+        move(i, 0);
+        clrtoeol();
+      }
+      refresh();
 
       if (alternate_window) {
         // Only refresh the part that is visible
@@ -255,13 +257,17 @@ int main(int argc, const char *argv[])
       refresh_packages = false;
     }
 
+    if (search_mode) {
+      move(LAST_LINE, search_string.length() + 1);
+    }
+
     // Refresh alternate window
     if (alternate_window) {
       debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
 
       // Clear the window to remove residual lines when refreshing pad smaller
       // than the full width
-      for (int i = 1; i < LIST_HEIGHT; ++i) {
+      for (int i = start_alternate - selected_alternate_row; i < LIST_HEIGHT; ++i) {
         move(i, COLS / 2);
         clrtoeol();
       }
@@ -507,6 +513,32 @@ int main(int argc, const char *argv[])
             }
           }
           break;
+        case ctrl('d'):
+          start_alternate = min((size_t) start_alternate + LIST_HEIGHT / 2, alternate_rows.size() - 1);
+          if (start_alternate > selected_alternate_row) {
+            selected_alternate_row = min((size_t) start_alternate, alternate_rows.size());
+          }
+
+          if (alternate_mode == VERSION_CHECK) {
+            start_packages = start_alternate;
+            selected_package = selected_alternate_row;
+            refresh_packages = true;
+          }
+
+          print_alternate(filtered_packages.at(selected_package));
+          break;
+        case ctrl('u'):
+          start_alternate = max(start_alternate - LIST_HEIGHT / 2, 0);
+          if (start_alternate < selected_alternate_row - LIST_HEIGHT) {
+            selected_alternate_row = start_alternate + LIST_HEIGHT - 1;
+          }
+          if (alternate_mode == VERSION_CHECK) {
+            start_packages = start_alternate;
+            selected_package = selected_alternate_row;
+            refresh_packages = true;
+          }
+          print_alternate(filtered_packages.at(selected_package));
+          break;
         case 'h':
           if (alternate_mode == DEPENDENCIES) {
             if (show_sub_dependencies) {
@@ -696,49 +728,48 @@ void read_packages(MAX_LENGTH *max_length)
 
 vector<string> get_versions(PACKAGE package)
 {
-  char command[COMMAND_SIZE];
-  // TODO: Break out to script file:
-  snprintf(command, COMMAND_SIZE, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package.name.c_str());
-  return get_from_cache(package.name, command);
+  if (fake_http_requests) { // {{{1
+    render_alternate_window_border();
+    vector<string> fake_response = vector<string>();
+    fake_response.push_back("5.1.1");
+    fake_response.push_back("5.1.0");
+    fake_response.push_back("5.0.0");
+    fake_response.push_back("4.2.0");
+    fake_response.push_back("4.1.3");
+    fake_response.push_back("4.1.2");
+    fake_response.push_back("4.1.1");
+    fake_response.push_back("4.1.0");
+    fake_response.push_back("4.0.0");
+    fake_response.push_back("3.7.0");
+    fake_response.push_back("3.6.0");
+    fake_response.push_back("3.5.0");
+    fake_response.push_back("3.4.0");
+    fake_response.push_back("3.3.0");
+    fake_response.push_back("3.2.0");
+    fake_response.push_back("3.1.0");
+    fake_response.push_back("3.0.0");
+    fake_response.push_back("2.4.0");
+    fake_response.push_back("2.3.0");
+    fake_response.push_back("2.2.0");
+    fake_response.push_back("2.1.0");
+    fake_response.push_back("2.0.1");
+    fake_response.push_back("2.0.0");
+    fake_response.push_back("1.2.2");
+    fake_response.push_back("1.2.1");
+    fake_response.push_back("1.2.0");
+    fake_response.push_back("1.0.0");
+    return fake_response;
+  } else { // }}}
+    char command[COMMAND_SIZE];
+    // TODO: Break out to script file:
+    snprintf(command, COMMAND_SIZE, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package.name.c_str());
+    return get_from_cache(package.name, command);
+  }
 }
 
 void print_versions(PACKAGE package, int alternate_row) {
   selected_alternate_row = alternate_row;
-
-
-  if (fake_http_requests) { // {{{1
-    render_alternate_window_border();
-    alternate_rows.clear();
-    alternate_rows.push_back("5.1.1");
-    alternate_rows.push_back("5.1.0");
-    alternate_rows.push_back("5.0.0");
-    alternate_rows.push_back("4.2.0");
-    alternate_rows.push_back("4.1.3");
-    alternate_rows.push_back("4.1.2");
-    alternate_rows.push_back("4.1.1");
-    alternate_rows.push_back("4.1.0");
-    alternate_rows.push_back("4.0.0");
-    alternate_rows.push_back("3.7.0");
-    alternate_rows.push_back("3.6.0");
-    alternate_rows.push_back("3.5.0");
-    alternate_rows.push_back("3.4.0");
-    alternate_rows.push_back("3.3.0");
-    alternate_rows.push_back("3.2.0");
-    alternate_rows.push_back("3.1.0");
-    alternate_rows.push_back("3.0.0");
-    alternate_rows.push_back("2.4.0");
-    alternate_rows.push_back("2.3.0");
-    alternate_rows.push_back("2.2.0");
-    alternate_rows.push_back("2.1.0");
-    alternate_rows.push_back("2.0.1");
-    alternate_rows.push_back("2.0.0");
-    alternate_rows.push_back("1.2.2");
-    alternate_rows.push_back("1.2.1");
-    alternate_rows.push_back("1.2.0");
-    alternate_rows.push_back("1.0.0");
-  } else { // }}}
-    alternate_rows = get_versions(package);
-  }
+  alternate_rows = get_versions(package);
   print_alternate(package);
 }
 
