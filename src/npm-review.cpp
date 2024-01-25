@@ -124,7 +124,6 @@ int main(int argc, const char *argv[])
   // TODO: Search in alternate window? N/P/n/p navigation?
   // TODO: Timeout on network requests?
   // TODO: "Undo" – install original version
-  // TODO: Make z[tzb]
   // TODO: Clear cache and reload from network/disk on ctrl-l
 
   const USHORT package_size = (short) pkgs.size();
@@ -397,6 +396,18 @@ int main(int argc, const char *argv[])
             break;
           case H("gk"):
             package_window_up();
+            break;
+          case H("zt"):
+            start_packages = selected_package;
+            refresh_packages = true;
+            break;
+          case H("zz"):
+            start_packages = max(0, selected_package - LIST_HEIGHT / 2);
+            refresh_packages = true;
+            break;
+          case H("zb"):
+            start_packages = max(0, selected_package - LIST_HEIGHT);
+            refresh_packages = true;
             break;
           default:
             debug("Unrecognized sequence\n");

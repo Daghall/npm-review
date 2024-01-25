@@ -35,9 +35,9 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |     `gk`  | Move to the next **higher** major _version_ (or up) |
 |     `gc`  | Move to the currently installed _version_ (or no-op) |
 |      `G`  | Move to the last item in the active window |
-|     `zt`  | Move the selected _alternate_ row to the top |
-|     `zz`  | Move the selected _alternate_ row to the middle |
-|     `zb`  | Move the selected _alternate_ row to the bottom |
+|     `zt`  | Move the selected row in the active window to the top |
+|     `zz`  | Move the selected row in the active window to the middle |
+|     `zb`  | Move the selected row in the active window to the bottom |
 |      `/`  | Start regex filtering in the _package_ window |
 | `ctrl-e`  | Scroll the active window up one row |
 | `ctrl-y`  | Scroll the active window down one row |
