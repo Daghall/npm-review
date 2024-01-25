@@ -104,7 +104,6 @@ int main(int argc, const char *argv[])
 
   initialize();
 
-
   MAX_LENGTH max_length;
   max_length.name = 0;
   max_length.version = 0;
@@ -709,7 +708,8 @@ int main(int argc, const char *argv[])
   }
 }
 
-void initialize() {
+void initialize()
+{
   debug("Initializing\n");
   setlocale(LC_ALL, "");  // Support UTF-8 characters
   initscr();              // Init ncurses screen
@@ -815,13 +815,15 @@ vector<string> get_versions(PACKAGE package)
   }
 }
 
-void print_versions(PACKAGE package, int alternate_row) {
+void print_versions(PACKAGE package, int alternate_row)
+{
   selected_alternate_row = alternate_row;
   alternate_rows = get_versions(package);
   print_alternate(&package);
 }
 
-cache_type* get_cache() {
+cache_type* get_cache()
+{
   switch (alternate_mode) {
     case DEPENDENCIES:
       return &dependency_cache;
@@ -1025,9 +1027,9 @@ void get_all_versions()
     alternate_mode = VERSION_CHECK;
     selected_alternate_row = 0;
 
-    for_each(filtered_packages.begin(), filtered_packages.end(), [](PACKAGE package) {
+    for (int i = filtered_packages.size(); i > 0; --i) {
       alternate_rows.push_back("Pending...");
-    });
+    }
   }
 
   PACKAGE package = filtered_packages.at(selected_package);
@@ -1081,7 +1083,6 @@ string get_major(string semver)
   return semver.substr(0, dot);
 }
 
-
 void uninstall_package(PACKAGE package)
 {
   if (!confirm("Uninstall " + package.name + "?")) {
@@ -1112,7 +1113,6 @@ void show_key_sequence(string message)
 {
   mvprintw(LAST_LINE, COLS - KEY_SEQUENCE_DISTANCE, "%s", message.c_str());
 }
-
 
 void show_message(string message, const USHORT color)
 {
@@ -1152,7 +1152,8 @@ void clear_key_sequence()
   clrtoeol();
 }
 
-void close_alternate_window() {
+void close_alternate_window()
+{
   clear_message();
   wclear(alternate_window);
   delwin(alternate_window);
@@ -1442,6 +1443,7 @@ int exit()
   }
   return endwin();
 }
+
 void debug_key(const char character, const char window_name[])
 {
   debug("Sending key  %s%c\t(%#04x) to %s\n",
