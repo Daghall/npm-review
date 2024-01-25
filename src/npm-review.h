@@ -105,3 +105,4 @@ void show_cursor();
 void hide_cursor();
 void getch_blocking_mode(bool should_block);
 int exit();
+void debug_key(const char character, const char window_name[]);

@@ -409,7 +409,7 @@ int main(int argc, const char *argv[])
     }
 
     if (search_mode) {
-      debug("Sending key '%c' (%#x) to search\n", character, character);
+      debug_key(character, "search");
       refresh_packages = true;
 
       switch (character) {
@@ -456,7 +456,7 @@ int main(int argc, const char *argv[])
       }
       debug("Searching for \"%s\"\n", search_string.c_str());
     } else if (alternate_window) {
-      debug("Sending key '%d' (%#x) to alternate window\n", character, character);
+      debug_key(character, "alternate window");
       clear_message();
 
       switch (character) {
@@ -595,7 +595,7 @@ int main(int argc, const char *argv[])
           break;
       }
     } else { // Package window
-      debug("Sending key '%c' (%#x) to package window\n", character, character);
+      debug_key(character, "package window");
       clear_message();
 
       switch (character) {
@@ -1430,4 +1430,13 @@ int exit()
     delwin(alternate_window);
   }
   return endwin();
+}
+void debug_key(const char character, const char window_name[])
+{
+  debug("Sending key  %s%c\t(%#04x) to %s\n",
+   (character < 0x1f ? "^" : ""),
+   (character < 0x1f ? character + 0x60 : character),
+   character,
+   window_name
+  );
 }
