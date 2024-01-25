@@ -467,13 +467,17 @@ int main(int argc, const char *argv[])
         case 'J':
           package_window_down();
           change_alternate_window();
-          start_alternate = 0;
+          if (alternate_mode != VERSION_CHECK) {
+            start_alternate = 0;
+          }
           break;
         case KEY_UP:
         case 'K':
           package_window_up();
           change_alternate_window();
-          start_alternate = 0;
+          if (alternate_mode != VERSION_CHECK) {
+            start_alternate = 0;
+          }
           break;
         case 'j':
           alternate_window_down();
