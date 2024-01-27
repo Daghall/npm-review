@@ -61,6 +61,7 @@ bool refresh_packages = true;
 
 bool list_versions = false;
 bool search_mode = false;
+bool search_reverse = false;
 bool message_shown = false;
 string search_string = "";
 string regex_parse_error;
@@ -142,7 +143,7 @@ int main(int argc, const char *argv[])
       copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
         return regex_search(package.name, search_regex);
       });
-    } catch(const regex_error &e) {
+    } catch (const regex_error &e) {
       regex_parse_error = e.what();
     }
 
@@ -673,6 +674,8 @@ int main(int argc, const char *argv[])
           selected_package = number_of_packages - 1;
           refresh_packages = true;
           break;
+        case '?':
+          search_reverse = true;
         case '/':
           search_mode = true;
           clear_message();
@@ -1117,7 +1120,7 @@ void show_error_message(string message)
 
 void show_searchsting()
 {
-  show_message("/" + search_string);
+  show_message((search_reverse ? "?" : "/") + search_string);
 }
 
 void clear_message()
