@@ -828,9 +828,9 @@ vector<string> get_from_cache(string package_name, char* command)
 
   if (!cache) return vector<string>();
 
-  cache_type::iterator cache_data = (*cache).find(package_name);
+  cache_type::iterator cache_data = cache->find(package_name);
 
-  if (cache_data != (*cache).end()) {
+  if (cache_data != cache->end()) {
     debug("Cache HIT for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string());
     // TODO: This feels inappropriate here. Clean it up
     init_alternate_window();
@@ -840,7 +840,7 @@ vector<string> get_from_cache(string package_name, char* command)
     if (alternate_mode != VERSION_CHECK) {
       init_alternate_window(true);
     }
-    cache_data = (*cache).insert((*cache).begin(), cache_item (package_name, shell_command(command)));
+    cache_data = cache->insert(cache->begin(), cache_item (package_name, shell_command(command)));
   }
 
   return cache_data->second;
