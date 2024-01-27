@@ -76,7 +76,7 @@ void get_info(PACKAGE package);
 void get_all_versions();
 string get_major(string semver);
 void change_alternate_window();
-void print_package_bar(bool use_global = false);
+void print_package_bar();
 void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);

@@ -64,7 +64,6 @@ bool search_mode = false;
 bool message_shown = false;
 string search_string = "";
 string regex_parse_error;
-string package_bar_info;
 
 // Caching
 cache_type dependency_cache;
@@ -203,23 +202,6 @@ int main(int argc, const char *argv[])
     attron(COLOR_PAIR(COLOR_INFO_BAR));
     mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
     attron(COLOR_PAIR(COLOR_INFO_BAR));
-
-    if (regex_parse_error.length() > 0) {
-      package_bar_info = regex_parse_error;
-    } else if (filtered_packages.size() == 0) {
-      package_bar_info = "No matches";
-    } else {
-      const int package_number_width = number_width(pkgs.size());
-      char x_of_y[32];
-      snprintf(x_of_y, 32, "%d/%-*zu", selected_package + 1, package_number_width, filtered_packages.size());
-
-      if (search_string.length() > 0) {
-        const size_t len = strlen(x_of_y);
-        snprintf(x_of_y + len, 32, " (%zu)", pkgs.size());
-      }
-
-      package_bar_info = x_of_y;
-    }
 
     print_package_bar();
 
@@ -968,7 +950,6 @@ void init_alternate_window(bool show_loading_message)
 
   render_alternate_window_border();
 
-  print_package_bar(true);
   attron(COLOR_PAIR(COLOR_INFO_BAR));
   mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│");
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
@@ -1246,10 +1227,28 @@ void change_alternate_window()
   }
 }
 
-void print_package_bar(bool use_global)
+void print_package_bar()
 {
-  const USHORT package_bar_length = ((alternate_window || use_global) ? COLS / 2 - 1: COLS) - 13;
+  const USHORT package_bar_length = (alternate_window ? COLS / 2 - 1: COLS) - 13;
   const bool filtered = search_string.length() > 0;
+  string package_bar_info;
+
+  if (regex_parse_error.length() > 0) {
+    package_bar_info = regex_parse_error;
+  } else if (filtered_packages.size() == 0) {
+    package_bar_info = "No matches";
+  } else {
+    const int package_number_width = number_width(pkgs.size());
+    char x_of_y[32];
+    snprintf(x_of_y, 32, "%d/%-*zu", selected_package + 1, package_number_width, filtered_packages.size());
+
+    if (search_string.length() > 0) {
+      const size_t len = strlen(x_of_y);
+      snprintf(x_of_y + len, 32, " (%zu)", pkgs.size());
+    }
+
+    package_bar_info = x_of_y;
+  }
 
   attron(COLOR_PAIR(COLOR_INFO_BAR));
   if (alternate_mode != DEPENDENCIES) {
