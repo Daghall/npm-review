@@ -61,10 +61,11 @@ bool refresh_packages = true;
 
 bool list_versions = false;
 bool search_mode = false;
-bool search_reverse = false;
 bool message_shown = false;
-string search_string = "";
+SEARCH search_packages;
+SEARCH search_alternate;
 string regex_parse_error;
+
 
 // Caching
 cache_type dependency_cache;
@@ -96,8 +97,8 @@ int main(int argc, const char *argv[])
         }
         break;
       case '/':
-        search_string = argv[argc];
-        search_string.erase(0, 1);
+        search_packages.string = argv[argc];
+        search_packages.string.erase(0, 1);
         break;
     }
   }
@@ -117,13 +118,15 @@ int main(int argc, const char *argv[])
     read_packages(&max_length);
   }
 
+  // TODO: Move "utility" functions to separate files
   // TODO: Sorting?
   // TODO: Cache "views"
   // TODO: Help screen
-  // TODO: Search in alternate window? N/P/n/p navigation?
   // TODO: Timeout on network requests?
   // TODO: "Undo" – install original version
   // TODO: Clear cache and reload from network/disk on ctrl-l
+  // TODO: gx – open URL?
+  // TODO: Make `gj` work in dependency and info mode
 
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
@@ -135,9 +138,9 @@ int main(int argc, const char *argv[])
   while (true) {
     USHORT package_index = 0;
 
-    // Searching
+    // Filtering packages
     try {
-      regex search_regex (search_string);
+      regex search_regex (search_packages.string);
       regex_parse_error = "";
       filtered_packages.clear();
       copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
@@ -159,8 +162,9 @@ int main(int argc, const char *argv[])
 
     wclear(package_window);
 
+    const string search_string = get_active_search()->string;
     if (search_string != "" && !message_shown) {
-     show_searchsting();
+      show_search_string();
     }
 
     if (key_sequence != "") {
@@ -202,6 +206,7 @@ int main(int argc, const char *argv[])
     // Render bottom bar
     attron(COLOR_PAIR(COLOR_INFO_BAR));
     mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
+    // TODO: Use clrtoeol instead?
     attron(COLOR_PAIR(COLOR_INFO_BAR));
 
     print_package_bar();
@@ -238,10 +243,6 @@ int main(int argc, const char *argv[])
       refresh_packages = false;
     }
 
-    if (search_mode) {
-      move(LAST_LINE, search_string.length() + 1);
-    }
-
     // Refresh alternate window
     if (alternate_window) {
       debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
@@ -255,6 +256,10 @@ int main(int argc, const char *argv[])
 
       refresh();
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
+    }
+
+    if (search_mode) {
+      move(LAST_LINE, get_active_search()->string.length() + 1);
     }
 
     if (list_versions) {
@@ -404,6 +409,8 @@ int main(int argc, const char *argv[])
     if (search_mode) {
       debug_key(character, "search");
       refresh_packages = true;
+      SEARCH *search = get_active_search();
+      string &search_string = search->string;
 
       switch (character) {
         case ctrl('c'):
@@ -412,6 +419,9 @@ int main(int argc, const char *argv[])
           search_string = "";
           clear_message();
           hide_cursor();
+          if (alternate_window) {
+            print_alternate();
+          }
           break;
         case ctrl('z'):
           search_mode = false;
@@ -420,7 +430,6 @@ int main(int argc, const char *argv[])
         case '\n':
           search_mode = false;
           if (search_string == "") {
-            search_string = "";
             show_error_message("Ignoring empty pattern");
           }
           hide_cursor();
@@ -433,7 +442,10 @@ int main(int argc, const char *argv[])
           if (last_character_position >= 0) {
             search_string.erase(last_character_position, 1);
             clear_message();
-            show_searchsting();
+            show_search_string();
+            if (alternate_window) {
+              print_alternate();
+            }
           } else {
             search_mode = false;
             clear_message();
@@ -444,10 +456,13 @@ int main(int argc, const char *argv[])
         default:
           if (is_printable(character)) {
             search_string += character;
-            show_searchsting();
+            show_search_string();
+            if (alternate_window) {
+              print_alternate();
+            }
           }
       }
-      debug("Searching for \"%s\"\n", search_string.c_str());
+      debug("Searching for \"%s\"\n", get_active_search()->string.c_str());
     } else if (alternate_window) {
       debug_key(character, "alternate window");
       clear_message();
@@ -586,6 +601,12 @@ int main(int argc, const char *argv[])
             refresh_packages = true;
           }
           break;
+        case '?':
+          initialize_search(&search_alternate, true);
+          break;
+        case '/':
+          initialize_search(&search_alternate);
+          break;
       }
     } else { // Package window
       debug_key(character, "package window");
@@ -675,12 +696,10 @@ int main(int argc, const char *argv[])
           refresh_packages = true;
           break;
         case '?':
-          search_reverse = true;
+          initialize_search(&search_packages, true);
+          break;
         case '/':
-          search_mode = true;
-          clear_message();
-          show_searchsting();
-          show_cursor();
+          initialize_search(&search_packages);
           break;
         case 'V':
           selected_package = 0;
@@ -713,6 +732,7 @@ void initialize()
   init_pair(COLOR_ERROR, COLOR_RED, COLOR_DEFAULT);
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_INFO_BAR, COLOR_DEFAULT, COLOR_BLUE);
+  init_pair(COLOR_SEARCH, COLOR_DEFAULT, COLOR_YELLOW);
   debug("Initialized. Columns: %d. Lines: %d\n", COLS, LINES);
 }
 
@@ -1118,9 +1138,26 @@ void show_error_message(string message)
   show_message(message, COLOR_ERROR);
 }
 
-void show_searchsting()
+void initialize_search(SEARCH *search, bool reverse)
 {
-  show_message((search_reverse ? "?" : "/") + search_string);
+  search->reverse = reverse;
+  search_mode = true;
+  clear_message();
+  show_search_string();
+  show_cursor();
+}
+
+SEARCH *get_active_search()
+{
+  return alternate_window
+    ? &search_alternate
+    : &search_packages;
+}
+
+void show_search_string()
+{
+  SEARCH *search = get_active_search();
+  show_message((search->reverse ? "?" : "/") + search->string);
 }
 
 void clear_message()
@@ -1190,20 +1227,71 @@ void print_alternate(PACKAGE *package)
 
   debug("Number of alternate items/rows: %zu/%d\n", alternate_rows.size(), alternate_length);
 
-  for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index](string &version) {
-    if (version == package_version) {
+  regex search_regex;
+  try {
+    // TODO: Show error message?
+    search_regex = search_alternate.string;
+  } catch (const regex_error &e) {
+    debug("Regex error: %s\n", e.what());
+  }
+
+  USHORT color = COLOR_DEFAULT;
+
+  for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color](const string &row) {
+    if (row == package_version) {
       wattron(alternate_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
+      color = COLOR_CURRENT_VERSION;
       if (selected_alternate_row < 0) {
         selected_alternate_row = index;
       }
     }
+
     if (selected_alternate_row == index) {
       wattron(alternate_window, A_STANDOUT);
     }
-    wprintw(alternate_window," %-*s \n", 512, version.c_str());
-    if (version == package_version) {
+
+    if (search_alternate.string != "") {
+      smatch matches;
+      string::const_iterator start = row.cbegin();
+      size_t prev = 0;
+
+      wprintw(alternate_window, " ");
+
+      while (regex_search(start, row.end(), matches, search_regex, regex_constants::match_any)) {
+        const string match = matches[0];
+        const string rest (start, row.cend());
+        size_t match_position = matches.position(0);
+
+        if (match.length() == 0) break;
+
+        wprintw(alternate_window, "%s", rest.substr(0, match_position).c_str());
+
+        wattroff(alternate_window, A_STANDOUT); // Color fix
+        wattron(alternate_window, COLOR_PAIR(COLOR_SEARCH));
+        wprintw(alternate_window, "%s", match.c_str());
+        wattroff(alternate_window, COLOR_PAIR(COLOR_SEARCH));
+        if (selected_alternate_row == index) wattron(alternate_window, A_STANDOUT); // Color fix
+
+        if (color != COLOR_DEFAULT) {
+          wattron(alternate_window, COLOR_PAIR(color));
+        }
+
+        prev = match_position + match.length();
+        start += prev;
+      }
+
+      const string rest (start - prev, row.cend());
+      wprintw(alternate_window, "%-*s\n", 512 - prev, rest.substr(prev).c_str());
+    } else {
+      wprintw(alternate_window," %-*s \n", 512, row.c_str());
+    }
+
+    // TODO: Save hits for n/N navigation
+
+    if (row == package_version) {
       wattroff(alternate_window, A_STANDOUT);
       wattron(alternate_window, COLOR_PAIR(COLOR_ERROR));
+      color = COLOR_ERROR;
     }
     wattroff(alternate_window, A_STANDOUT);
     ++index;
@@ -1233,7 +1321,7 @@ void change_alternate_window()
 void print_package_bar()
 {
   const USHORT package_bar_length = (alternate_window ? COLS / 2 - 1: COLS) - 13;
-  const bool filtered = search_string.length() > 0;
+  const bool filtered = search_packages.string.length() > 0;
   string package_bar_info;
 
   if (regex_parse_error.length() > 0) {
@@ -1245,7 +1333,7 @@ void print_package_bar()
     char x_of_y[32];
     snprintf(x_of_y, 32, "%d/%-*zu", selected_package + 1, package_number_width, filtered_packages.size());
 
-    if (search_string.length() > 0) {
+    if (search_packages.string.length() > 0) {
       const size_t len = strlen(x_of_y);
       snprintf(x_of_y + len, 32, " (%zu)", pkgs.size());
     }

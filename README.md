@@ -38,8 +38,8 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |     `zt`  | Move the selected row in the active window to the top |
 |     `zz`  | Move the selected row in the active window to the middle |
 |     `zb`  | Move the selected row in the active window to the bottom |
-|      `/`  | Start regex filtering in the _package_ window |
-|      `?`  | Start regex filtering in the _package_ window |
+|      `/`  | Start regex filtering/highlighting in the _package_/_alternate_ window |
+|      `?`  | Start regex filtering/highlighting in the _package_/_alternate_ window |
 | `ctrl-e`  | Scroll the active window up one row |
 | `ctrl-y`  | Scroll the active window down one row |
 | `ctrl-d`  | Scroll the active window up half a screen |

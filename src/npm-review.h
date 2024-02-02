@@ -19,6 +19,12 @@ typedef struct {
   USHORT version;
 } MAX_LENGTH;
 
+// TODO: Add history
+typedef struct {
+  string string;
+  bool reverse;
+} SEARCH;
+
 
 enum alternate_modes {
   VERSION,
@@ -40,6 +46,7 @@ const USHORT COLOR_PACKAGE = 2;
 const USHORT COLOR_ERROR = 3;
 const USHORT COLOR_CURRENT_VERSION = 4;
 const USHORT COLOR_INFO_BAR = 5;
+const USHORT COLOR_SEARCH = 6;
 
 const USHORT BOTTOM_BAR_HEIGHT = 2;
 const USHORT KEY_SEQUENCE_DISTANCE = 10;
@@ -56,9 +63,11 @@ const USHORT COMMAND_SIZE = 1024;
 
 // Simple "hash" function to convert a string of [a-z] characters into an int,
 // to be used in a switch. Long strings will overflow!
+// Remove 0x60 (making 'a' = 1, 'z' = 26).
+// Shift left with base 26.
 constexpr int H(const char* str, int sum = 0) {
   return *str
-    ? H(str + 1, (*str - 0x60) + sum * 0x1a)
+    ? H(str + 1, (*str - 0x60) + sum * 26)
     : sum;
 }
 
@@ -88,7 +97,9 @@ bool confirm(string message);
 void show_key_sequence(string message);
 void show_message(string message, const USHORT color = COLOR_DEFAULT);
 void show_error_message(string message);
-void show_searchsting();
+void initialize_search(SEARCH *search, bool reverse = false);
+SEARCH* get_active_search();
+void show_search_string();
 void clear_key_sequence();
 void clear_message();
 void close_alternate_window();
