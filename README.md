@@ -110,6 +110,7 @@ The data being fetched is processed with external programs, that needs to be ins
   - [jq](https://github.com/stedolan/jq)
   - [gawk](https://www.gnu.org/software/gawk/)
   - [ncurses](https://en.wikipedia.org/wiki/Ncurses) (for building)
+  - [clang](https://clang.llvm.org/) (for building)
 
 ## Installation
 

@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include "npm-review.h"
+#include "debug.h"
 
 using namespace std;
 
@@ -29,12 +30,6 @@ const char *DEPENDENCIES_STRING = {
 #include "../build/dependencies"
 };
 
-// Debugging
-FILE *debug_log = NULL;
-#define debug(...)    if (debug_log != NULL) { \
-  fprintf(debug_log, __VA_ARGS__); \
-  fflush(debug_log); \
-}
 bool fake_http_requests = false;
 
 // "Constants"
@@ -79,7 +74,7 @@ int main(int argc, const char *argv[])
       case '-':
         switch (argv[argc][1]) {
           case 'd':
-            debug_log = fopen("./log", "w");
+            init_logging();
             break;
           case 'f':
             fake_http_requests = true;
@@ -278,11 +273,11 @@ int main(int argc, const char *argv[])
     const short character = getch();
 
     if (character == KEY_RESIZE) {
-     clear();
-     // TODO: Warn about too small screen? 44 seems to be minimum width
-     debug("Resizing... Columns: %d, Lines: %d\n", COLS, LINES);
-     refresh_packages = true;
-     continue;
+      clear();
+      // TODO: Warn about too small screen? 44 seems to be minimum width
+      debug("Resizing... Columns: %d, Lines: %d\n", COLS, LINES);
+      refresh_packages = true;
+      continue;
     } else if (character == ERR) {
       getch_blocking_mode(true);
       continue;
@@ -1527,19 +1522,9 @@ void getch_blocking_mode(bool should_block)
 
 int exit()
 {
-  fclose(debug_log);
+  terminate_logging();
   if (alternate_window) {
     delwin(alternate_window);
   }
   return endwin();
-}
-
-void debug_key(const char character, const char window_name[])
-{
-  debug("Sending key  %s%c\t(%#04x) to %s\n",
-   (character < 0x1f ? "^" : ""),
-   (character < 0x1f ? character + 0x60 : character),
-   character,
-   window_name
-  );
 }
