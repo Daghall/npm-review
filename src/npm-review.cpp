@@ -19,6 +19,7 @@
 #include <vector>
 #include "npm-review.h"
 #include "debug.h"
+#include "string.h"
 
 using namespace std;
 
@@ -210,7 +211,7 @@ int main(int argc, const char *argv[])
       attron(COLOR_PAIR(COLOR_INFO_BAR));
       char x_of_y[32];
       snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
-      const char* alternate_mode_string = alternate_mode_to_string();
+      const char* alternate_mode_string = alternate_mode_to_string(alternate_mode);
       mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s", alternate_mode_string, COLS / 2 - (5 + strlen(alternate_mode_string)), x_of_y);
       attroff(COLOR_PAIR(COLOR_INFO_BAR));
     }
@@ -731,22 +732,6 @@ void initialize()
   debug("Initialized. Columns: %d. Lines: %d\n", COLS, LINES);
 }
 
-vector<string> split_string(string package_string)
-{
-  char buffer[1024];
-  vector<string> result = vector<string>();
-
-  strcpy(buffer, package_string.c_str());
-  char *str = strtok(buffer, " ");
-
-  while (str != NULL) {
-    result.push_back(string(str));
-    str = strtok(NULL, " ");
-  }
-
-  return result;
-}
-
 void read_packages(MAX_LENGTH *max_length)
 {
   debug("Reading packages\n");
@@ -846,11 +831,11 @@ vector<string> get_from_cache(string package_name, char* command)
   cache_type::iterator cache_data = cache->find(package_name);
 
   if (cache_data != cache->end()) {
-    debug("Cache HIT for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string());
+    debug("Cache HIT for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string(alternate_mode));
     // TODO: This feels inappropriate here. Clean it up
     init_alternate_window();
   } else {
-    debug("Cache MISS for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string());
+    debug("Cache MISS for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string(alternate_mode));
     // TODO: This feels inappropriate here. Clean it up
     if (alternate_mode != VERSION_CHECK) {
       init_alternate_window(true);
@@ -1074,12 +1059,6 @@ void get_all_versions()
   } else {
     selected_alternate_row = selected_package;
   }
-}
-
-string get_major(string semver)
-{
-  const size_t dot = semver.find(".");
-  return semver.substr(0, dot);
 }
 
 void uninstall_package(PACKAGE package)
@@ -1421,25 +1400,6 @@ int sync_shell_command(const string command, std::function<void(char*)> callback
   return pclose(output);
 }
 
-const USHORT number_width(USHORT number)
-{
-  USHORT rest = number;
-  USHORT i = 0;
-
-  while (rest > 0) {
-    rest /= 10;
-    ++i;
-  }
-
-  return i;
-}
-
-string escape_slashes(string str)
-{
-  regex slash ("/");
-  return regex_replace(str, slash, "\\/");
-}
-
 void package_window_up()
 {
   if (filtered_packages.size() > 0) {
@@ -1483,25 +1443,6 @@ void render_alternate_window_border()
     mvprintw(i, COLS / 2 - 1, "│");
   }
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
-}
-
-const char* alternate_mode_to_string()
-{
-  switch (alternate_mode) {
-    case VERSION:
-      return "versions";
-    case DEPENDENCIES:
-      return "dependencies";
-    case INFO:
-      return "info";
-    case VERSION_CHECK:
-      return "version check";
-  }
-}
-
-bool is_printable(char character)
-{
-  return character >= 0x20 && character < 0x7F;
 }
 
 void show_cursor()
