@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "npm-review.h"
+#include "ncurses.h"
 #include "debug.h"
 #include "string.h"
 #include "search.h"
@@ -36,8 +37,6 @@ const char *DEPENDENCIES_STRING = {
 bool fake_http_requests = false;
 
 // "Constants"
-#define LIST_HEIGHT   (USHORT)(LINES - BOTTOM_BAR_HEIGHT)
-#define LAST_LINE     (USHORT)(LINES - 1)
 #define ctrl(c)       (c & 0x1f)
 
 // Global variables
@@ -58,7 +57,6 @@ bool show_sub_dependencies = false;
 bool refresh_packages = true;
 
 bool list_versions = false;
-bool message_shown = false;
 string regex_parse_error;
 
 Search searching(&alternate_window);
@@ -160,7 +158,7 @@ int main(int argc, const char *argv[])
     wclear(package_window);
 
     const string *search_string = searching.get_active_string();
-    if (*search_string != "" && !message_shown) {
+    if (*search_string != "" && !is_message_shown()) {
       searching.show_search_string();
     }
 
@@ -552,7 +550,8 @@ int main(int argc, const char *argv[])
               show_sub_dependencies = false;
               get_dependencies(filtered_packages.at(selected_package), false);
             } else {
-              close_alternate_window();
+              close_alternate_window(&alternate_window);
+              refresh_packages = true;
             }
           }
           break;
@@ -563,7 +562,8 @@ int main(int argc, const char *argv[])
           }
           break;
         case 'q':
-          close_alternate_window();
+          close_alternate_window(&alternate_window);
+          refresh_packages = true;
           break;
         case ctrl('c'):
         case 'Q':
@@ -705,30 +705,6 @@ int main(int argc, const char *argv[])
       }
     }
   }
-}
-
-void initialize()
-{
-  debug("Initializing\n");
-  setlocale(LC_ALL, "");  // Support UTF-8 characters
-  initscr();              // Init ncurses screen
-  keypad(stdscr, true);   // Activate extend keyboard detection
-  ESCDELAY = 0;           // Remove delay of ESC, since no escape sequences are expected
-  raw();                  // Handle signals manually, via `getch`
-  noecho();               // Do not echo key-presses
-  getch_blocking_mode(false);
-  start_color();
-  use_default_colors();
-  assume_default_colors(COLOR_WHITE, COLOR_DEFAULT);
-  hide_cursor();
-
-  init_pair(COLOR_SELECTED_PACKAGE, COLOR_BLACK, COLOR_GREEN);
-  init_pair(COLOR_PACKAGE, COLOR_GREEN, COLOR_DEFAULT);
-  init_pair(COLOR_ERROR, COLOR_RED, COLOR_DEFAULT);
-  init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
-  init_pair(COLOR_INFO_BAR, COLOR_DEFAULT, COLOR_BLUE);
-  init_pair(COLOR_SEARCH, COLOR_DEFAULT, COLOR_YELLOW);
-  debug("Initialized. Columns: %d. Lines: %d\n", COLS, LINES);
 }
 
 void read_packages(MAX_LENGTH *max_length)
@@ -1086,79 +1062,6 @@ void uninstall_package(PACKAGE package)
   }
 }
 
-void show_key_sequence(string message)
-{
-  mvprintw(LAST_LINE, COLS - KEY_SEQUENCE_DISTANCE, "%s", message.c_str());
-}
-
-void show_message(string message, const USHORT color)
-{
-  clear_message();
-  message_shown = true;
-  debug("Showing message: \"%s\", color: %d\n", message.c_str(), color);
-  if (color != COLOR_DEFAULT) {
-    attron(COLOR_PAIR(color));
-  }
-  mvprintw(LAST_LINE, 0, "%s", message.c_str());
-  if (color != COLOR_DEFAULT) {
-    attroff(COLOR_PAIR(color));
-  }
-  refresh();
-}
-
-void show_error_message(string message)
-{
-  show_message(message, COLOR_ERROR);
-}
-
-void clear_message()
-{
-  move(LAST_LINE, 0);
-  clrtoeol();
-  message_shown = false;
-}
-
-void clear_key_sequence()
-{
-  move(LAST_LINE, COLS - KEY_SEQUENCE_DISTANCE);
-  clrtoeol();
-}
-
-void close_alternate_window()
-{
-  clear_message();
-  wclear(alternate_window);
-  delwin(alternate_window);
-  alternate_window = NULL;
-
-  for (int i = 0; i < LIST_HEIGHT; ++i) {
-    move(i, COLS / 2 - 1);
-    clrtoeol();
-  }
-  refresh();
-  refresh_packages = true;
-}
-
-bool confirm(string message)
-{
-  clear_message();
-  string confirm_message = message + " [y/n]";
-  show_message(confirm_message, COLOR_PACKAGE);
-  move(LAST_LINE, confirm_message.length());
-  show_cursor();
-
-  const short answer = getch();
-
-  clear_message();
-  hide_cursor();
-
-  if (tolower(answer) == 'y') {
-    return true;
-  }
-
-  return false;
-}
-
 // TODO: Color unmet deps?
 void print_alternate(PACKAGE *package)
 {
@@ -1412,31 +1315,6 @@ void alternate_window_down()
   }
 
   print_alternate();
-}
-
-void render_alternate_window_border()
-{
-  attron(COLOR_PAIR(COLOR_INFO_BAR));
-  for (int i = 0; i < LIST_HEIGHT; ++i) {
-    mvprintw(i, COLS / 2 - 1, "│");
-  }
-  attroff(COLOR_PAIR(COLOR_INFO_BAR));
-}
-
-void show_cursor()
-{
-  curs_set(1);
-}
-
-void hide_cursor()
-{
-  show_cursor(); // Explicitly show it to avoid rendering bug after `npm {un,}install`
-  curs_set(0);
-}
-
-void getch_blocking_mode(bool should_block)
-{
-  nodelay(stdscr, !should_block);
 }
 
 int exit()

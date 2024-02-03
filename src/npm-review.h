@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "ncurses.h"
 #include "types.h"
 
 using namespace std;
@@ -21,20 +22,6 @@ typedef map<CACHE_TYPE> cache_type;
 
 
 // Constants
-
-const USHORT COLOR_DEFAULT = -1;
-const USHORT COLOR_SELECTED_PACKAGE = 1;
-const USHORT COLOR_PACKAGE = 2;
-const USHORT COLOR_ERROR = 3;
-const USHORT COLOR_CURRENT_VERSION = 4;
-const USHORT COLOR_INFO_BAR = 5;
-const USHORT COLOR_SEARCH = 6;
-
-const USHORT BOTTOM_BAR_HEIGHT = 2;
-const USHORT KEY_SEQUENCE_DISTANCE = 10;
-
-const USHORT KEY_ESC = 0x1B;
-const USHORT KEY_DELETE = 0x7F;
 
 const USHORT COMMAND_SIZE = 1024;
 
@@ -73,13 +60,6 @@ int sync_shell_command(const string command, std::function<void(char*)> callback
 void init_alternate_window(bool show_loading_message = false);
 void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);
-bool confirm(string message);
-void show_key_sequence(string message);
-void show_message(string message, const USHORT color = COLOR_DEFAULT);
-void show_error_message(string message);
-void clear_key_sequence();
-void clear_message();
-void close_alternate_window();
 void package_window_up();
 void package_window_down();
 void alternate_window_up();

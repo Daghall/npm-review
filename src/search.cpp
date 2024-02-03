@@ -1,5 +1,5 @@
 #include <vector>
-#include "npm-review.h"
+#include "ncurses.h"
 #include "debug.h"
 #include "search.h"
 
