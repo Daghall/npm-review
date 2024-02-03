@@ -4,30 +4,9 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "types.h"
 
 using namespace std;
-
-// Types
-
-typedef unsigned short USHORT;
-
-typedef struct {
-  string name;
-  string version;
-  bool is_dev;
-} PACKAGE;
-
-typedef struct {
-  USHORT name;
-  USHORT version;
-} MAX_LENGTH;
-
-// TODO: Add history
-typedef struct {
-  string string;
-  bool reverse;
-} SEARCH;
-
 
 enum alternate_modes {
   VERSION,
