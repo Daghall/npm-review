@@ -42,7 +42,6 @@ constexpr int H(const char* str, int sum = 0) {
 
 void initialize();
 void read_packages(MAX_LENGTH *foo);
-vector<string> shell_command(const string);
 void print_alternate(PACKAGE *package = nullptr);
 vector<string> get_versions(PACKAGE package);
 void print_versions(PACKAGE package, int alternate_row = -1);
@@ -56,7 +55,6 @@ void print_package_bar();
 void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
-int sync_shell_command(const string command, std::function<void(char*)> callback);
 void init_alternate_window(bool show_loading_message = false);
 void install_package(PACKAGE package, const string new_version);
 void uninstall_package(PACKAGE package);

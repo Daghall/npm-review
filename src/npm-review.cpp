@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "string.h"
 #include "search.h"
+#include "shell.h"
 
 using namespace std;
 
@@ -1042,6 +1043,9 @@ void uninstall_package(PACKAGE package)
     return;
   }
 
+  // Move to last line to make `npm install` render here
+  show_message("");
+
   char command[COMMAND_SIZE];
   snprintf(command, COMMAND_SIZE, "npm uninstall %s --silent", package.name.c_str());
 
@@ -1244,41 +1248,6 @@ void select_dependency_node(string &selected)
 
     ++selected_alternate_row;
   }
-}
-
-vector<string> shell_command(const string command)
-{
-  vector<string> result;
-  char buffer[COMMAND_SIZE];
-  FILE *output = popen(command.c_str(), "r");
-
-  debug("Executing \"%s\"\n", command.c_str());
-
-  while (fgets(buffer, sizeof(buffer), output) != NULL) {
-    size_t last = strlen(buffer) - 1;
-    buffer[last] = '\0';
-    result.push_back(buffer);
-  }
-
-  pclose(output);
-  return result;
-}
-
-int sync_shell_command(const string command, std::function<void(char*)> callback)
-{
-  char buffer[COMMAND_SIZE];
-  FILE *output = popen(command.c_str(), "r");
-  setvbuf(output, buffer, _IOLBF, sizeof(buffer));
-
-  debug("Executing sync \"%s\"\n", command.c_str());
-
-  while (fgets(buffer, sizeof(buffer), output) != NULL) {
-    size_t last = strlen(buffer) - 1;
-    buffer[last] = '\0';
-    callback(buffer);
-  }
-
-  return pclose(output);
 }
 
 void package_window_up()
