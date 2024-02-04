@@ -211,7 +211,7 @@ int main(int argc, const char *argv[])
       char x_of_y[32];
       snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
       const char* alternate_mode_string = alternate_mode_to_string(alternate_mode);
-      mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s", alternate_mode_string, COLS / 2 - (5 + strlen(alternate_mode_string)), x_of_y);
+      mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s ", alternate_mode_string, COLS / 2 - (5 + strlen(alternate_mode_string)), x_of_y);
       attroff(COLOR_PAIR(COLOR_INFO_BAR));
     }
 
