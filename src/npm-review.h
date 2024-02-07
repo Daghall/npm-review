@@ -16,14 +16,6 @@ enum alternate_modes {
   VERSION_CHECK,
 };
 
-#define CACHE_TYPE string, vector<string>
-typedef pair<CACHE_TYPE> cache_item;
-typedef map<CACHE_TYPE> cache_type;
-
-
-// Constants
-
-const USHORT COMMAND_SIZE = 1024;
 
 // Stringify, used in the Makefile to build include files
 #define STR(x) #x
@@ -41,14 +33,10 @@ constexpr int H(const char* str, int sum = 0) {
 }
 
 void initialize();
-void read_packages(MAX_LENGTH *foo);
 void print_alternate(PACKAGE *package = nullptr);
-vector<string> get_versions(PACKAGE package);
 void print_versions(PACKAGE package, int alternate_row = -1);
 map<CACHE_TYPE>* get_cache();
 vector<string> get_from_cache(string package_name, char* command);
-void get_dependencies(PACKAGE package, bool init = true);
-void get_info(PACKAGE package);
 void get_all_versions();
 void change_alternate_window();
 void print_package_bar();

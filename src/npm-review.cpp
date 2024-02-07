@@ -1,4 +1,3 @@
-// vi: fdm=marker
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -7,33 +6,24 @@
 #include <cstdio>
 #include <cstring>
 #include <curses.h>
-#include <map>
-#include <signal.h>
 #include <functional>
-#include <iterator>
 #include <iterator>
 #include <ncurses.h>
 #include <regex>
+#include <signal.h>
 #include <stdio.h>
 #include <string>
 #include <vector>
 
-#include "npm-review.h"
-#include "ncurses.h"
 #include "debug.h"
-#include "string.h"
+#include "ncurses.h"
+#include "npm.h"
+#include "npm-review.h"
 #include "search.h"
 #include "shell.h"
+#include "string.h"
 
 using namespace std;
-
-const char *INFO_STRING = {
-#include "../build/info"
-};
-
-const char *DEPENDENCIES_STRING = {
-#include "../build/dependencies"
-};
 
 bool fake_http_requests = false;
 
@@ -111,7 +101,7 @@ int main(int argc, const char *argv[])
     // TODO: Handle invalid package name
     print_versions(pkgs.at(0), 0);
   } else {
-    read_packages(&max_length);
+    read_packages(&max_length, &pkgs);
   }
 
   // TODO: Move "utility" functions to separate files
@@ -549,7 +539,7 @@ int main(int argc, const char *argv[])
           if (alternate_mode == DEPENDENCIES) {
             if (show_sub_dependencies) {
               show_sub_dependencies = false;
-              get_dependencies(filtered_packages.at(selected_package), false);
+              get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, false, show_sub_dependencies, fake_http_requests);
             } else {
               close_alternate_window(&alternate_window);
               refresh_packages = true;
@@ -559,7 +549,7 @@ int main(int argc, const char *argv[])
         case 'l':
           if (alternate_mode == DEPENDENCIES && !show_sub_dependencies) {
             show_sub_dependencies = true;
-            get_dependencies(filtered_packages.at(selected_package), false);
+              get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, false, show_sub_dependencies, fake_http_requests);
           }
           break;
         case 'q':
@@ -572,7 +562,8 @@ int main(int argc, const char *argv[])
         case '\n':
           switch (alternate_mode) {
             case VERSION:
-            install_package(filtered_packages.at(selected_package), alternate_rows.at(selected_alternate_row));
+              install_package(filtered_packages.at(selected_package), alternate_rows.at(selected_alternate_row), selected_alternate_row, pkgs);
+              refresh_packages = true;
               break;
             case DEPENDENCIES:
             case INFO:
@@ -626,13 +617,13 @@ int main(int argc, const char *argv[])
         case 'i':
           if (filtered_packages.size() == 0) continue;
           alternate_mode = INFO;
-          get_info(filtered_packages.at(selected_package));
+          get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests);
           break;
         case 'I':
         case 'l':
           if (filtered_packages.size() == 0) continue;
           alternate_mode = DEPENDENCIES;
-          get_dependencies(filtered_packages.at(selected_package));
+          get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, true, show_sub_dependencies, fake_http_requests);
           break;
         case '\n':
           if (filtered_packages.size() == 0) continue;
@@ -642,7 +633,8 @@ int main(int argc, const char *argv[])
         case 'D': {
           if (filtered_packages.size() == 0) continue;
           PACKAGE package = filtered_packages.at(selected_package);
-          uninstall_package(package);
+          uninstall_package(package, pkgs);
+          refresh_packages = true;
           break;
         }
         case ctrl('e'):
@@ -708,78 +700,10 @@ int main(int argc, const char *argv[])
   }
 }
 
-void read_packages(MAX_LENGTH *max_length)
-{
-  debug("Reading packages\n");
-  string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r 2> /dev/null < package.json; done";
-  vector<string> packages = shell_command(command);
-  pkgs.clear();
-
-  for_each(packages.begin(), packages.end(), [&max_length](string &package) {
-    const vector<string> strings = split_string(package);
-    string name = strings.at(0);
-    string version = strings.at(1);
-    string origin = strings.at(2);
-    pkgs.push_back({
-      .name = name,
-      .version = version,
-      .is_dev = origin == ".devDependencies"
-    });
-
-    if (max_length && name.length() > max_length->name) {
-      max_length->name = name.length();
-    }
-    if (max_length && version.length() > max_length->version) {
-      max_length->version = version.length();
-    }
-  });
-}
-
-vector<string> get_versions(PACKAGE package)
-{
-  if (fake_http_requests) { // {{{1
-    render_alternate_window_border();
-    vector<string> fake_response = vector<string>();
-    fake_response.push_back("5.1.1");
-    fake_response.push_back("5.1.0");
-    fake_response.push_back("5.0.0");
-    fake_response.push_back("4.2.0");
-    fake_response.push_back("4.1.3");
-    fake_response.push_back("4.1.2");
-    fake_response.push_back("4.1.1");
-    fake_response.push_back("4.1.0");
-    fake_response.push_back("4.0.0");
-    fake_response.push_back("3.7.0");
-    fake_response.push_back("3.6.0");
-    fake_response.push_back("3.5.0");
-    fake_response.push_back("3.4.0");
-    fake_response.push_back("3.3.0");
-    fake_response.push_back("3.2.0");
-    fake_response.push_back("3.1.0");
-    fake_response.push_back("3.0.0");
-    fake_response.push_back("2.4.0");
-    fake_response.push_back("2.3.0");
-    fake_response.push_back("2.2.0");
-    fake_response.push_back("2.1.0");
-    fake_response.push_back("2.0.1");
-    fake_response.push_back("2.0.0");
-    fake_response.push_back("1.2.2");
-    fake_response.push_back("1.2.1");
-    fake_response.push_back("1.2.0");
-    fake_response.push_back("1.0.0");
-    return fake_response;
-  } else { // }}}
-    char command[COMMAND_SIZE];
-    // TODO: Break out to script file:
-    snprintf(command, COMMAND_SIZE, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package.name.c_str());
-    return get_from_cache(package.name, command);
-  }
-}
-
 void print_versions(PACKAGE package, int alternate_row)
 {
   selected_alternate_row = alternate_row;
-  alternate_rows = get_versions(package);
+  alternate_rows = get_versions(package, fake_http_requests);
   print_alternate(&package);
 }
 
@@ -822,103 +746,6 @@ vector<string> get_from_cache(string package_name, char* command)
   return cache_data->second;
 }
 
-void get_dependencies(PACKAGE package, bool init)
-{
-  string package_name = escape_slashes(package.name);
-  string selected;
-
-  if (!init) {
-    selected = find_dependency_root();
-  }
-
-  if (fake_http_requests) { // {{{1
-    render_alternate_window_border();
-    alternate_rows.clear();
-    if (!show_sub_dependencies) {
-      alternate_rows.push_back("┬ express-handlebars    5.3.5");
-      alternate_rows.push_back("├─┬ glob                7.2.0");
-      alternate_rows.push_back("├── graceful-fs         4.2.10");
-      alternate_rows.push_back("└─┬ handlebars          4.7.7");
-    } else {
-      alternate_rows.push_back("┬ express-handlebars    5.3.5");
-      alternate_rows.push_back("├─┬ glob                7.2.0");
-      alternate_rows.push_back("│ ├── fs.realpath       1.0.0");
-      alternate_rows.push_back("│ ├─┬ inflight          1.0.6");
-      alternate_rows.push_back("│ │ ├── once            1.4.0");
-      alternate_rows.push_back("│ │ └── wrappy          1.0.2");
-      alternate_rows.push_back("│ ├── inherits          2.0.4");
-      alternate_rows.push_back("│ ├── minimatch         3.1.2");
-      alternate_rows.push_back("│ ├─┬ once              1.4.0");
-      alternate_rows.push_back("│ │ └── wrappy          1.0.2");
-      alternate_rows.push_back("│ └── path-is-absolute  1.0.1");
-      alternate_rows.push_back("├── graceful-fs         4.2.10");
-      alternate_rows.push_back("└─┬ handlebars          4.7.7");
-      alternate_rows.push_back("  ├── minimist          1.2.6");
-      alternate_rows.push_back("  ├── neo-async         2.6.2");
-      alternate_rows.push_back("  ├── source-map        0.6.1");
-      alternate_rows.push_back("  ├── uglify-js         3.15.3");
-      alternate_rows.push_back("  └── wordwrap          1.0.0");
-    }
-  } else { // }}}
-    char command[COMMAND_SIZE];
-    snprintf(command, COMMAND_SIZE, DEPENDENCIES_STRING, package_name.c_str(), "^$");
-    vector<string> dependency_data = get_from_cache(package_name, command);
-
-    if (show_sub_dependencies) {
-      alternate_rows = dependency_data;
-    } else {
-      regex sub_dependency_regex ("^(│| )");
-      alternate_rows.clear();
-      copy_if(dependency_data.begin(), dependency_data.end(), back_inserter(alternate_rows), [&sub_dependency_regex](string dependency) {
-        return !regex_search(dependency, sub_dependency_regex);
-      });
-    }
-  }
-
-  selected_alternate_row = 0;
-  select_dependency_node(selected);
-  print_alternate(&package);
-}
-
-void get_info(PACKAGE package)
-{
-  string package_name = escape_slashes(package.name);
-  const char*  package_version = package.version.c_str();
-
-  if (fake_http_requests) { // {{{1
-    render_alternate_window_border();
-    alternate_rows.clear();
-    alternate_rows.push_back("express-handlebars | BSD-3-Clause");
-    alternate_rows.push_back("A Handlebars view engine for Express which doesn't suck.");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("CURRENT");
-    alternate_rows.push_back("5.3.5 (2021-11-13)");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("LATEST");
-    alternate_rows.push_back("7.0.7 (2023-04-15)");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("DEPENDENCIES");
-    alternate_rows.push_back("– glob");
-    alternate_rows.push_back("– graceful-fs");
-    alternate_rows.push_back("– handlebars");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("HOMEPAGE");
-    alternate_rows.push_back("https://github.com/express-handlebars/express-handlebars");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("AUTHOR");
-    alternate_rows.push_back("Eric Ferraiuolo <eferraiuolo@gmail.com> (http://ericf.me/)");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("KEYWORDS");
-    alternate_rows.push_back("express, express3, handlebars, view, layout, partials, templates");
-  } else { // }}}
-    char command[COMMAND_SIZE];
-    snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), package_version, package_version);
-    alternate_rows = get_from_cache(package_name, command);
-  }
-  selected_alternate_row = 0;
-  print_alternate(&package);
-}
-
 void init_alternate_window(bool show_loading_message)
 {
   // Clear window
@@ -940,41 +767,6 @@ void init_alternate_window(bool show_loading_message)
     attroff(COLOR_PAIR(COLOR_SELECTED_PACKAGE));
     refresh();
   }
-}
-
-void install_package(PACKAGE package, const string new_version)
-{
-  // Move to last line to make `npm install` render here
-  show_message("");
-
-  for_each(dependency_cache.begin(), dependency_cache.end(), [](cache_item item) {
-      debug("  key: %s\n", item.first.c_str());
-  });
-
-  // TODO: Handle names with slashes
-  dependency_cache.erase(package.name);
-  info_cache.erase(package.name);
-
-  char command[COMMAND_SIZE];
-  snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
-  int exit_code = sync_shell_command(command, [](char* line) {
-    debug("NPM INSTALL: %s\n", line);
-  });
-
-  hide_cursor();
-
-  if (exit_code == OK) {
-    read_packages(NULL);
-    selected_alternate_row = -1;
-    PACKAGE package = filtered_packages.at(selected_package);
-    package.version = new_version;
-    print_alternate(&package);
-  } else {
-    // TODO: Handle error
-    debug("Install failed\n");
-  }
-
-  show_message("Installed \"" + package.name + "@" + new_version + "\"");
 }
 
 // This function is called once per package, in the main loop,
@@ -999,7 +791,7 @@ void get_all_versions()
   prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
   refresh_packages = true;
 
-  vector<string> versions = get_versions(package);
+  vector<string> versions = get_versions(package, fake_http_requests);
   string current_major = get_major(package.version);
   string latest_major = get_major(versions.at(0));
 
@@ -1034,35 +826,6 @@ void get_all_versions()
     print_alternate(&pkgs.at(selected_package - 1));
   } else {
     selected_alternate_row = selected_package;
-  }
-}
-
-void uninstall_package(PACKAGE package)
-{
-  if (!confirm("Uninstall " + package.name + "?")) {
-    return;
-  }
-
-  // Move to last line to make `npm install` render here
-  show_message("");
-
-  char command[COMMAND_SIZE];
-  snprintf(command, COMMAND_SIZE, "npm uninstall %s --silent", package.name.c_str());
-
-  int exit_code = sync_shell_command(command, [](char* line) {
-    debug("NPM UNINSTALL: %s\n", line);
-  });
-
-  hide_cursor();
-
-  if (exit_code == OK) {
-    debug("Package uninstalled\n");
-    show_message("Uninstalled " + package.name);
-    read_packages(NULL);
-  } else {
-    // TODO: Handle error
-    debug("Uninstall failed\n");
-    show_error_message("Uninstall failed");
   }
 }
 
@@ -1164,10 +927,10 @@ void change_alternate_window()
     print_versions(filtered_packages.at(selected_package));
     break;
   case DEPENDENCIES:
-    get_dependencies(filtered_packages.at(selected_package));
+    get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, true, show_sub_dependencies, fake_http_requests);
     break;
   case INFO:
-    get_info(filtered_packages.at(selected_package));
+    get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests);
     break;
   case VERSION_CHECK:
     selected_alternate_row = selected_package;
