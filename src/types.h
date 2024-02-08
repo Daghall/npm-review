@@ -31,4 +31,11 @@ typedef struct {
   vector<string> &alternate_rows;
 } DEP_OPTS;
 
+enum alternate_modes {
+  VERSION,
+  DEPENDENCIES,
+  INFO,
+  VERSION_CHECK,
+};
+
 #endif // _TYPES_H

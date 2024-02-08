@@ -1,19 +1,5 @@
-#include <algorithm>
-#include <cctype>
-#include <cmath>
-#include <cstdarg>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <curses.h>
-#include <functional>
-#include <iterator>
-#include <ncurses.h>
 #include <regex>
 #include <signal.h>
-#include <stdio.h>
-#include <string>
-#include <vector>
 
 #include "debug.h"
 #include "ncurses.h"
@@ -52,11 +38,6 @@ string regex_parse_error;
 
 Search searching(&alternate_window);
 
-
-// Caching
-cache_type dependency_cache;
-cache_type info_cache;
-cache_type version_cache;
 
 int main(int argc, const char *argv[])
 {
@@ -104,7 +85,6 @@ int main(int argc, const char *argv[])
     read_packages(&max_length, &pkgs);
   }
 
-  // TODO: Move "utility" functions to separate files
   // TODO: Sorting?
   // TODO: Cache "views"
   // TODO: Help screen
@@ -703,47 +683,8 @@ int main(int argc, const char *argv[])
 void print_versions(PACKAGE package, int alternate_row)
 {
   selected_alternate_row = alternate_row;
-  alternate_rows = get_versions(package, fake_http_requests);
+  alternate_rows = get_versions(package, fake_http_requests, VERSION);
   print_alternate(&package);
-}
-
-cache_type* get_cache()
-{
-  switch (alternate_mode) {
-    case DEPENDENCIES:
-      return &dependency_cache;
-        break;
-    case INFO:
-      return &info_cache;
-    case VERSION:
-    case VERSION_CHECK:
-      return &version_cache;
-        break;
-  }
-}
-
-vector<string> get_from_cache(string package_name, char* command)
-{
-  cache_type *cache = get_cache();
-
-  if (!cache) return vector<string>();
-
-  cache_type::iterator cache_data = cache->find(package_name);
-
-  if (cache_data != cache->end()) {
-    debug("Cache HIT for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string(alternate_mode));
-    // TODO: This feels inappropriate here. Clean it up
-    init_alternate_window();
-  } else {
-    debug("Cache MISS for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string(alternate_mode));
-    // TODO: This feels inappropriate here. Clean it up
-    if (alternate_mode != VERSION_CHECK) {
-      init_alternate_window(true);
-    }
-    cache_data = cache->insert(cache->begin(), cache_item (package_name, shell_command(command)));
-  }
-
-  return cache_data->second;
 }
 
 void init_alternate_window(bool show_loading_message)
@@ -791,7 +732,7 @@ void get_all_versions()
   prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
   refresh_packages = true;
 
-  vector<string> versions = get_versions(package, fake_http_requests);
+  vector<string> versions = get_versions(package, fake_http_requests, VERSION_CHECK);
   string current_major = get_major(package.version);
   string latest_major = get_major(versions.at(0));
 

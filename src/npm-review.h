@@ -1,21 +1,10 @@
 #ifndef _NPM_REVIEW_H
 #define _NPM_REVIEW_H
 
-#include <map>
-#include <string>
-#include <vector>
 #include "ncurses.h"
 #include "types.h"
 
 using namespace std;
-
-enum alternate_modes {
-  VERSION,
-  DEPENDENCIES,
-  INFO,
-  VERSION_CHECK,
-};
-
 
 // Stringify, used in the Makefile to build include files
 #define STR(x) #x
@@ -35,8 +24,6 @@ constexpr int H(const char* str, int sum = 0) {
 void initialize();
 void print_alternate(PACKAGE *package = nullptr);
 void print_versions(PACKAGE package, int alternate_row = -1);
-map<CACHE_TYPE>* get_cache();
-vector<string> get_from_cache(string package_name, char* command);
 void get_all_versions();
 void change_alternate_window();
 void print_package_bar();
@@ -44,8 +31,6 @@ void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
 void init_alternate_window(bool show_loading_message = false);
-void install_package(PACKAGE package, const string new_version);
-void uninstall_package(PACKAGE package);
 void package_window_up();
 void package_window_down();
 void alternate_window_up();

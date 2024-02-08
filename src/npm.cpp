@@ -1,7 +1,6 @@
 // vi: fdm=marker
 #include <regex>
-#include <string>
-#include <vector>
+#include "cache.h"
 #include "debug.h"
 #include "npm.h"
 #include "shell.h"
@@ -16,6 +15,7 @@ const char *INFO_STRING = {
 #include "../build/info"
 };
 
+CACHES *caches = get_caches();
 
 using namespace std;
 
@@ -46,7 +46,7 @@ void read_packages(MAX_LENGTH *max_length, vector<PACKAGE> *pkgs)
   });
 }
 
-vector<string> get_versions(PACKAGE package, bool fake_http_requests)
+vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_modes alternate_mode)
 {
   if (fake_http_requests) { // {{{1
     render_alternate_window_border();
@@ -83,7 +83,7 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests)
     char command[COMMAND_SIZE];
     // TODO: Break out to script file:
     snprintf(command, COMMAND_SIZE, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package.name.c_str());
-    return get_from_cache(package.name, command);
+    return get_from_cache(package.name, command, alternate_mode);
   }
 }
 
@@ -128,7 +128,7 @@ void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &se
   } else { // }}}
     char command[COMMAND_SIZE];
     snprintf(command, COMMAND_SIZE, DEPENDENCIES_STRING, package_name.c_str(), "^$");
-    vector<string> dependency_data = get_from_cache(package_name, command);
+    vector<string> dependency_data = get_from_cache(package_name, command, DEPENDENCIES);
 
     if (show_sub_dependencies) {
       alternate_rows = dependency_data;
@@ -179,7 +179,7 @@ void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_a
   } else { // }}}
     char command[COMMAND_SIZE];
     snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), package_version, package_version);
-    alternate_rows = get_from_cache(package_name, command);
+    alternate_rows = get_from_cache(package_name, command, INFO);
   }
   selected_alternate_row = 0;
   print_alternate(&package);
@@ -190,9 +190,10 @@ void install_package(PACKAGE &package, const string new_version, short &selected
   // Move to last line to make `npm install` render here
   show_message("");
 
-  // TODO: Handle names with slashes
-  dependency_cache.erase(package.name);
-  info_cache.erase(package.name);
+  string package_name = escape_slashes(package.name);
+
+  caches->dependencies->erase(package_name);
+  caches->info->erase(package_name);
 
   char command[COMMAND_SIZE];
   snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
