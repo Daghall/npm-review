@@ -1,7 +1,7 @@
 .PHONY: all build clean includes
 
 CC := clang++
-CFLAGS := -std=c++11 -Wall -Werror
+CFLAGS := -std=c++11 -Wall -Werror ${CFLAGS}
 SRC_DIR := src
 BUILD_DIR := build
 EXECUTABLE := npm-review
