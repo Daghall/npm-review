@@ -37,6 +37,7 @@ bool list_versions = false;
 string regex_parse_error;
 
 Search searching(&alternate_window);
+USHORT cursor_position = 1;
 
 
 int main(int argc, const char *argv[])
@@ -225,7 +226,7 @@ int main(int argc, const char *argv[])
     }
 
     if (searching.is_search_mode()) {
-      move(LAST_LINE, searching.get_active_string()->length() + 1);
+      move(LAST_LINE, cursor_position);
     }
 
     if (list_versions) {
@@ -401,10 +402,9 @@ int main(int argc, const char *argv[])
         case KEY_DELETE:
         case KEY_BACKSPACE:
         case '\b': {
-          const short last_character_position = search_string->length() - 1;
-
-          if (last_character_position >= 0) {
-            search_string->erase(last_character_position, 1);
+          if (cursor_position > 1) {
+            --cursor_position;
+            search_string->erase(cursor_position - 1, 1);
             clear_message();
             searching.show_search_string();
             if (alternate_window) {
@@ -417,9 +417,20 @@ int main(int argc, const char *argv[])
           }
           break;
         }
+        case KEY_LEFT:
+          if (cursor_position > 1) {
+            --cursor_position;
+          }
+          break;
+        case KEY_RIGHT:
+          if (cursor_position <= searching.get_active_string()->length()) {
+            ++cursor_position;
+          }
+          break;
         default:
           if (is_printable(character)) {
-            *search_string += character;
+            search_string->insert(cursor_position - 1, 1, character);
+            ++cursor_position;
             searching.show_search_string();
             if (alternate_window) {
               print_alternate();
@@ -591,9 +602,11 @@ int main(int argc, const char *argv[])
           }
           break;
         case '?':
+          cursor_position = searching.get_active_string()->length() + 1;
           searching.initialize_search(true);
           break;
         case '/':
+          cursor_position = searching.get_active_string()->length() + 1;
           searching.initialize_search();
           break;
       }
@@ -686,9 +699,11 @@ int main(int argc, const char *argv[])
           refresh_packages = true;
           break;
         case '?':
+          cursor_position = searching.get_active_string()->length() + 1;
           searching.initialize_search(true);
           break;
         case '/':
+          cursor_position = searching.get_active_string()->length() + 1;
           searching.initialize_search();
           break;
         case 'V':
