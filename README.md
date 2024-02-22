@@ -40,19 +40,22 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |     `zb`  | Move the selected row in the active window to the bottom |
 |      `/`  | Start regex filtering/highlighting in the _package_/_alternate_ window |
 |      `?`  | Start regex filtering/highlighting in the _package_/_alternate_ window |
+|      `n`  | Jump to next search hit |
+|      `N`  | Jump to previous search hit |
 | `ctrl-e`  | Scroll the active window up one row |
 | `ctrl-y`  | Scroll the active window down one row |
 | `ctrl-d`  | Scroll the active window up half a screen |
 | `ctrl-u`  | Scroll the active window down half a screen |
 
 
-## Searching
+## Filtering in the _package_ window
 
-To start regex filtering, hit `/` and start typing.
+To start regex filtering, hit `/` or `?` and start typing.
 
 Pressing `Enter` exits search mode, keeping the filtering.
 
 Press `Esc` or `ctrl-c` (while in search mode) to clear pattern and exit search mode, showing everything.
+
 
 
 ### Initialize with search
@@ -102,6 +105,17 @@ popper.js    1.16.1  (DEV)                    ✓ – new major: 2
 redom        3.29.0  (DEV)                1 new
 webpack-cli  5.1.1   (DEV)                3 new
 ```
+
+### Searching in the _alternate_ window
+
+To start regex searching, hit `/` or `?` and start typing. Hits are highlighted incrementally.  
+Press `ENTER` to confirm the search pattern.
+
+Jump to the next/previous hit with `n`/`N`.  
+Searching with `/` jumps down on "next" and up on "previous", while `?` is the other way around.
+
+Search jumping wraps when it hits top or bottom.
+
 
 ## Prerequisites
 

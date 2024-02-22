@@ -211,7 +211,7 @@ void install_package(PACKAGE &package, const string new_version, short &selected
     selected_alternate_row = -1;
     print_alternate(&package);
   } else {
-    show_message("Installation failed", COLOR_ERROR);
+    show_error_message("Installation failed");
     debug("Install failed\n");
   }
 }

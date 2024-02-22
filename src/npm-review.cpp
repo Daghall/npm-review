@@ -231,10 +231,10 @@ int main(int argc, const char *argv[])
     if (list_versions) {
       get_all_versions();
 
-      getch_blocking_mode(false);
+      getch_blocking_mode(false); // TODO: Move to get_all_versions()
       if (list_versions && getch() == ctrl('c')) {
         list_versions = false;
-        show_message("Aborted version check", COLOR_ERROR);
+        show_error_message("Aborted version check");
         getch_blocking_mode(true);
         print_alternate(&pkgs.at(selected_package));
         continue;
@@ -532,6 +532,28 @@ int main(int argc, const char *argv[])
               get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, false, show_sub_dependencies, fake_http_requests);
           }
           break;
+        case 'n':
+          {
+            if (searching.alternate.reverse) {
+              searching.search_hit_prev(selected_alternate_row);
+            } else {
+              searching.search_hit_next(selected_alternate_row);
+            }
+
+            print_alternate();
+            break;
+          }
+        case 'N':
+          {
+            if (searching.alternate.reverse) {
+              searching.search_hit_next(selected_alternate_row);
+            } else {
+              searching.search_hit_prev(selected_alternate_row);
+            }
+
+            print_alternate();
+            break;
+          }
         case 'q':
           close_alternate_window(&alternate_window);
           refresh_packages = true;
@@ -714,6 +736,9 @@ void init_alternate_window(bool show_loading_message)
 // to make canceling possible.
 void get_all_versions()
 {
+  // TODO: Key-binding to install the latest minor/major?
+  // ctrl-a?
+
   if (selected_package == 0) {
     init_alternate_window();
     alternate_rows.clear();
@@ -798,6 +823,7 @@ void print_alternate(PACKAGE *package)
   }
 
   USHORT color = COLOR_DEFAULT;
+  searching.search_hits.clear();
 
   for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color](const string &row) {
     if (row == package_version) {
@@ -825,6 +851,8 @@ void print_alternate(PACKAGE *package)
         size_t match_position = matches.position(0);
 
         if (match.length() == 0) break;
+
+        searching.search_hits.push_back(index);
 
         wprintw(alternate_window, "%s", rest.substr(0, match_position).c_str());
 
