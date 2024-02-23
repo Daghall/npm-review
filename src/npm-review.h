@@ -27,6 +27,7 @@ void print_versions(PACKAGE package, int alternate_row = -1);
 void get_all_versions();
 void change_alternate_window();
 void print_package_bar();
+void print_alternate_bar();
 void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);

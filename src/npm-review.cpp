@@ -80,6 +80,8 @@ int main(int argc, const char *argv[])
   if (pkgs.size() == 1) {
     show_message("Fetching versions for " + pkgs.at(0).name + "...");
     alternate_mode = VERSION;
+    print_package_bar();
+    print_alternate_bar();
     // TODO: Handle invalid package name
     print_versions(pkgs.at(0), 0);
   } else {
@@ -171,20 +173,10 @@ int main(int argc, const char *argv[])
     }
 
     // Render bottom bar
-    attron(COLOR_PAIR(COLOR_INFO_BAR));
-    mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
-    // TODO: Use clrtoeol instead?
-    attron(COLOR_PAIR(COLOR_INFO_BAR));
-
     print_package_bar();
 
     if (alternate_window) {
-      attron(COLOR_PAIR(COLOR_INFO_BAR));
-      char x_of_y[32];
-      snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
-      const char* alternate_mode_string = alternate_mode_to_string(alternate_mode);
-      mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s ", alternate_mode_string, COLS / 2 - (5 + strlen(alternate_mode_string)), x_of_y);
-      attroff(COLOR_PAIR(COLOR_INFO_BAR));
+      print_alternate_bar();
     }
 
     // Refresh package window
@@ -952,6 +944,16 @@ void print_package_bar()
     mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
   }
   mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", filtered ? "filtered" : "packages", package_bar_length, package_bar_info.c_str());
+  attroff(COLOR_PAIR(COLOR_INFO_BAR));
+}
+
+void print_alternate_bar()
+{
+  attron(COLOR_PAIR(COLOR_INFO_BAR));
+  char x_of_y[32];
+  snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
+  const char* alternate_mode_string = alternate_mode_to_string(alternate_mode);
+  mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s ", alternate_mode_string, COLS / 2 - (4 + strlen(alternate_mode_string)), x_of_y);
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
