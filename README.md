@@ -8,6 +8,7 @@ Heavily inspired by [tig](https://github.com/jonas/tig).
 
 ## Flags
 
+  - `-p <package name>` – Specify a package name to use instead of `package.json`. Opens [version check](#version-enter) view directly
   - `-V` – Initialize with [version check](#version-check-v)
   - See [development](#development) for more
 
