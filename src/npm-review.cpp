@@ -39,6 +39,8 @@ string regex_parse_error;
 Search searching(&alternate_window);
 USHORT cursor_position = 1;
 
+regex dependency_root_pattern ("^(└|├)");
+
 
 int main(int argc, const char *argv[])
 {
@@ -95,7 +97,7 @@ int main(int argc, const char *argv[])
   // TODO: "Undo" – install original version
   // TODO: Clear cache and reload from network/disk on ctrl-l
   // TODO: gx – open URL?
-  // TODO: Make `gj` work in dependency and info mode
+  // TODO: Make `gj` work in info mode?
 
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
@@ -276,48 +278,85 @@ int main(int argc, const char *argv[])
             }
           case H("gj"):
             {
-              if (alternate_mode != VERSION) {
-                debug("Key sequence interpreted as 'j'\n");
-                alternate_window_down();
-                break;
-              }
-
-              const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
-              vector<string>::iterator next_major = find_if(alternate_rows.begin() + selected_alternate_row, alternate_rows.end(), [&major_version](string item) {
-                  return atoi(item.c_str()) != major_version;
+              switch (alternate_mode) {
+                case VERSION:
+                {
+                  const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
+                  vector<string>::iterator next_major = find_if(alternate_rows.begin() + selected_alternate_row, alternate_rows.end(), [&major_version](string item) {
+                    return atoi(item.c_str()) != major_version;
                   });
 
-              if (next_major == alternate_rows.end()) {
-                selected_alternate_row = alternate_rows.size() - 1;
-                show_error_message("Hit bottom, no more versions");
-              } else {
-                selected_alternate_row = distance(alternate_rows.begin(), next_major);
-              }
+                  if (next_major == alternate_rows.end()) {
+                    selected_alternate_row = alternate_rows.size() - 1;
+                    show_error_message("Hit bottom, no more versions");
+                  } else {
+                    selected_alternate_row = distance(alternate_rows.begin(), next_major);
+                  }
 
-              print_alternate();
+                  print_alternate();
+                  break;
+                }
+                case DEPENDENCIES:
+                {
+                  vector<string>::iterator next_root_branch = find_if(alternate_rows.begin() + selected_alternate_row + 1, alternate_rows.end(), [](string item) {
+                    return regex_search(item, dependency_root_pattern);
+                  });
+
+                  if (next_root_branch == alternate_rows.end()) {
+                    show_error_message("Hit bottom, no more root branches");
+                  } else {
+                    selected_alternate_row = distance(alternate_rows.begin(), next_root_branch);
+                  }
+
+                  print_alternate();
+                  break;
+                }
+                default:
+                  debug("Key sequence interpreted as 'j'\n");
+                  alternate_window_down();
+              }
               break;
             }
           case H("gk"):
             {
-              if (alternate_mode != VERSION) {
-                debug("Key sequence interpreted as 'k'\n");
-                alternate_window_up();
-                break;
-              }
-              const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
-              vector<string>::reverse_iterator previous_major = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [&major_version](string item) {
-                  return atoi(item.c_str()) != major_version;
+              switch (alternate_mode) {
+                case VERSION:
+                {
+                  const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
+                  vector<string>::reverse_iterator previous_major = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [&major_version](string item) {
+                    return atoi(item.c_str()) != major_version;
                   });
 
-              if (previous_major == alternate_rows.rend()) {
-                selected_alternate_row = 0;
-                show_error_message("Hit top, no more versions");
-              } else {
-                selected_alternate_row = distance(previous_major, alternate_rows.rend() - 1);
-              }
+                  if (previous_major == alternate_rows.rend()) {
+                    selected_alternate_row = 0;
+                    show_error_message("Hit top, no more versions");
+                  } else {
+                    selected_alternate_row = distance(previous_major, alternate_rows.rend() - 1);
+                  }
 
-              print_alternate();
+                  print_alternate();
+                }
+                case DEPENDENCIES:
+                {
+                  vector<string>::reverse_iterator previous_root_branch = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [](string item) {
+                    return regex_search(item, dependency_root_pattern);
+                  });
+
+                  if (previous_root_branch == alternate_rows.rend()) {
+                    show_error_message("Hit top, no more root branches");
+                  } else {
+                    selected_alternate_row = distance(previous_root_branch, alternate_rows.rend() - 1);
+                  }
+
+                  print_alternate();
+                }
+                  break;
+                default:
+                debug("Key sequence interpreted as 'k'\n");
+                alternate_window_up();
+              }
               break;
+                break;
             }
           case H("zt"):
             start_alternate = selected_alternate_row;
@@ -883,8 +922,6 @@ void print_alternate(PACKAGE *package)
       wprintw(alternate_window," %-*s \n", 512, row.c_str());
     }
 
-    // TODO: Save hits for n/N navigation
-
     if (row == package_version) {
       wattroff(alternate_window, A_STANDOUT);
       wattron(alternate_window, COLOR_PAIR(COLOR_ERROR));
@@ -971,8 +1008,7 @@ string find_dependency_root()
 {
   if (alternate_rows.size() == 0) return "";
 
-  regex root ("^(└|├)");
-  while (selected_alternate_row > 0 && !regex_search(alternate_rows.at(selected_alternate_row), root)) {
+  while (selected_alternate_row > 0 && !regex_search(alternate_rows.at(selected_alternate_row), dependency_root_pattern)) {
     --selected_alternate_row;
   }
 
