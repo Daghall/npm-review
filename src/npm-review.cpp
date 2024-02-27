@@ -82,8 +82,8 @@ int main(int argc, const char *argv[])
   if (pkgs.size() == 1) {
     show_message("Fetching versions for " + pkgs.at(0).name + "...");
     alternate_mode = VERSION;
-    print_package_bar();
-    print_alternate_bar();
+    render_package_bar();
+    render_alternate_bar();
     // TODO: Handle invalid package name
     print_versions(pkgs.at(0), 0);
   } else {
@@ -175,10 +175,10 @@ int main(int argc, const char *argv[])
     }
 
     // Render bottom bar
-    print_package_bar();
+    render_package_bar();
 
     if (alternate_window) {
-      print_alternate_bar();
+      render_alternate_bar();
     }
 
     // Refresh package window
@@ -226,7 +226,6 @@ int main(int argc, const char *argv[])
     if (list_versions) {
       get_all_versions();
 
-      getch_blocking_mode(false); // TODO: Move to get_all_versions()
       if (list_versions && getch() == ctrl('c')) {
         list_versions = false;
         show_error_message("Aborted version check");
@@ -785,6 +784,8 @@ void get_all_versions()
   // TODO: Key-binding to install the latest minor/major?
   // ctrl-a?
 
+  getch_blocking_mode(false); // TODO: Move to get_all_versions()
+
   if (selected_package == 0) {
     init_alternate_window();
     alternate_rows.clear();
@@ -952,7 +953,7 @@ void change_alternate_window()
   }
 }
 
-void print_package_bar()
+void render_package_bar()
 {
   const USHORT package_bar_length = (alternate_window ? COLS / 2 - 1: COLS) - 13;
   const string search_string = searching.package.string;
@@ -984,13 +985,14 @@ void print_package_bar()
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
-void print_alternate_bar()
+void render_alternate_bar()
 {
   attron(COLOR_PAIR(COLOR_INFO_BAR));
   char x_of_y[32];
   snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
   const char* alternate_mode_string = alternate_mode_to_string(alternate_mode);
-  mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s ", alternate_mode_string, COLS / 2 - (4 + strlen(alternate_mode_string)), x_of_y);
+  const USHORT offset = 5 - COLS % 2;
+  mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s ", alternate_mode_string, COLS / 2 - (offset + strlen(alternate_mode_string)), x_of_y);
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
