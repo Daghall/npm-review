@@ -97,7 +97,6 @@ int main(int argc, const char *argv[])
   // TODO: "Undo" – install original version
   // TODO: Clear cache and reload from network/disk on ctrl-l
   // TODO: gx – open URL?
-  // TODO: Make `gj` work in info mode?
 
   const USHORT package_size = (short) pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
@@ -310,6 +309,24 @@ int main(int argc, const char *argv[])
                   print_alternate();
                   break;
                 }
+                case INFO:
+                {
+                  vector<string>::iterator next_paragraph = find_if(alternate_rows.begin() + selected_alternate_row + 1, alternate_rows.end(), [](string item) {
+                    return item == "";
+                  });
+
+                  if (next_paragraph == alternate_rows.end()) {
+                    show_error_message("Hit bottom, no more paragraphs");
+                  } else {
+                    short next = distance(alternate_rows.begin(), next_paragraph) + 1;
+                    if (next < alternate_rows.size()) {
+                      selected_alternate_row = next;
+                    }
+                  }
+
+                  print_alternate();
+                  break;
+                }
                 default:
                   debug("Key sequence interpreted as 'j'\n");
                   alternate_window_down();
@@ -348,8 +365,35 @@ int main(int argc, const char *argv[])
                   }
 
                   print_alternate();
-                }
                   break;
+                }
+                case INFO:
+                {
+                  vector<string>::reverse_iterator this_paragraph = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [](string item) {
+                    return item == "";
+                  });
+
+                  if (this_paragraph == alternate_rows.rend()) {
+                    show_error_message("Hit top, no more paragraphs");
+                    break;
+                  }
+
+                  vector<string>::reverse_iterator previous_paragraph = find_if(this_paragraph + 1, alternate_rows.rend(), [](string item) {
+                    return item == "";
+                  });
+
+                  if (previous_paragraph == alternate_rows.rend()) {
+                    selected_alternate_row = 0;
+                  } else {
+                    short previous = distance(previous_paragraph, alternate_rows.rend());
+                    if (previous > 0) {
+                      selected_alternate_row = previous;
+                    }
+                  }
+
+                  print_alternate();
+                  break;
+                }
                 default:
                 debug("Key sequence interpreted as 'k'\n");
                 alternate_window_up();
