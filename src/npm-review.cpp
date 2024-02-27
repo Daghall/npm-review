@@ -36,7 +36,7 @@ bool refresh_packages = true;
 bool list_versions = false;
 string regex_parse_error;
 
-Search searching(&alternate_window);
+Search *searching;
 USHORT cursor_position = 1;
 
 regex dependency_root_pattern ("^(└|├)");
@@ -44,6 +44,8 @@ regex dependency_root_pattern ("^(└|├)");
 
 int main(int argc, const char *argv[])
 {
+  string search_string;
+
   while (--argc > 0) {
     switch (argv[argc][0]) {
       case '-':
@@ -67,10 +69,13 @@ int main(int argc, const char *argv[])
         }
         break;
       case '/':
-        string search_string = argv[argc];
-        searching.package.string = search_string.substr(1);
+        search_string = argv[argc];
         break;
     }
+  }
+  searching = new Search(&alternate_window);
+  if (search_string != "") {
+    searching->package.string = search_string.substr(1);
   }
 
   initialize();
@@ -110,7 +115,7 @@ int main(int argc, const char *argv[])
 
     // Filtering packages
     try {
-      regex search_regex (searching.package.string);
+      regex search_regex (searching->package.string);
       regex_parse_error = "";
       filtered_packages.clear();
       copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
@@ -132,9 +137,9 @@ int main(int argc, const char *argv[])
 
     wclear(package_window);
 
-    const string *search_string = searching.get_active_string();
+    const string *search_string = searching->get_active_string();
     if (*search_string != "" && !is_message_shown()) {
-      searching.show_search_string();
+      searching->show_search_string();
     }
 
     if (key_sequence != "") {
@@ -218,7 +223,7 @@ int main(int argc, const char *argv[])
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
     }
 
-    if (searching.is_search_mode()) {
+    if (searching->is_search_mode()) {
       move(LAST_LINE, cursor_position);
     }
 
@@ -447,15 +452,15 @@ int main(int argc, const char *argv[])
       continue;
     }
 
-    if (searching.is_search_mode()) {
+    if (searching->is_search_mode()) {
       debug_key(character, "search");
       refresh_packages = true;
-      string *search_string = searching.get_active_string();
+      string *search_string = searching->get_active_string();
 
       switch (character) {
         case ctrl('c'):
         case KEY_ESC:
-          searching.clear();
+          searching->clear();
           clear_message();
           hide_cursor();
           if (alternate_window) {
@@ -463,11 +468,11 @@ int main(int argc, const char *argv[])
           }
           break;
         case ctrl('z'):
-          searching.disable();
+          searching->disable();
           hide_cursor();
           raise(SIGTSTP);
         case '\n':
-          searching.disable();
+          searching->disable();
           if (*search_string == "") {
             show_error_message("Ignoring empty pattern");
           }
@@ -480,12 +485,12 @@ int main(int argc, const char *argv[])
             --cursor_position;
             search_string->erase(cursor_position - 1, 1);
             clear_message();
-            searching.show_search_string();
+            searching->show_search_string();
             if (alternate_window) {
               print_alternate();
             }
           } else {
-            searching.disable();
+            searching->disable();
             clear_message();
             hide_cursor();
           }
@@ -497,7 +502,7 @@ int main(int argc, const char *argv[])
           }
           break;
         case KEY_RIGHT:
-          if (cursor_position <= searching.get_active_string()->length()) {
+          if (cursor_position <= searching->get_active_string()->length()) {
             ++cursor_position;
           }
           break;
@@ -505,13 +510,13 @@ int main(int argc, const char *argv[])
           if (is_printable(character)) {
             search_string->insert(cursor_position - 1, 1, character);
             ++cursor_position;
-            searching.show_search_string();
+            searching->show_search_string();
             if (alternate_window) {
               print_alternate();
             }
           }
       }
-      debug("Searching for \"%s\"\n", searching.get_active_string()->c_str());
+      debug("Searching for \"%s\"\n", searching->get_active_string()->c_str());
     } else if (alternate_window) {
       debug_key(character, "alternate window");
       clear_message();
@@ -619,10 +624,10 @@ int main(int argc, const char *argv[])
           break;
         case 'n':
           {
-            if (searching.alternate.reverse) {
-              searching.search_hit_prev(selected_alternate_row);
+            if (searching->alternate.reverse) {
+              searching->search_hit_prev(selected_alternate_row);
             } else {
-              searching.search_hit_next(selected_alternate_row);
+              searching->search_hit_next(selected_alternate_row);
             }
 
             print_alternate();
@@ -630,10 +635,10 @@ int main(int argc, const char *argv[])
           }
         case 'N':
           {
-            if (searching.alternate.reverse) {
-              searching.search_hit_next(selected_alternate_row);
+            if (searching->alternate.reverse) {
+              searching->search_hit_next(selected_alternate_row);
             } else {
-              searching.search_hit_prev(selected_alternate_row);
+              searching->search_hit_prev(selected_alternate_row);
             }
 
             print_alternate();
@@ -676,12 +681,12 @@ int main(int argc, const char *argv[])
           }
           break;
         case '?':
-          cursor_position = searching.get_active_string()->length() + 1;
-          searching.initialize_search(true);
+          cursor_position = searching->get_active_string()->length() + 1;
+          searching->initialize_search(true);
           break;
         case '/':
-          cursor_position = searching.get_active_string()->length() + 1;
-          searching.initialize_search();
+          cursor_position = searching->get_active_string()->length() + 1;
+          searching->initialize_search();
           break;
       }
     } else { // Package window
@@ -773,12 +778,12 @@ int main(int argc, const char *argv[])
           refresh_packages = true;
           break;
         case '?':
-          cursor_position = searching.get_active_string()->length() + 1;
-          searching.initialize_search(true);
+          cursor_position = searching->get_active_string()->length() + 1;
+          searching->initialize_search(true);
           break;
         case '/':
-          cursor_position = searching.get_active_string()->length() + 1;
-          searching.initialize_search();
+          cursor_position = searching->get_active_string()->length() + 1;
+          searching->initialize_search();
           break;
         case 'V':
           selected_package = 0;
@@ -908,13 +913,13 @@ void print_alternate(PACKAGE *package)
   regex search_regex;
   try {
     // TODO: Show error message?
-    search_regex = searching.alternate.string;
+    search_regex = searching->alternate.string;
   } catch (const regex_error &e) {
     debug("Regex error: %s\n", e.what());
   }
 
   USHORT color = COLOR_DEFAULT;
-  searching.search_hits.clear();
+  searching->search_hits.clear();
 
   for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color](const string &row) {
     if (row == package_version) {
@@ -929,7 +934,7 @@ void print_alternate(PACKAGE *package)
       wattron(alternate_window, A_STANDOUT);
     }
 
-    if (searching.alternate.string != "") {
+    if (searching->alternate.string != "") {
       smatch matches;
       string::const_iterator start = row.cbegin();
       size_t prev = 0;
@@ -943,7 +948,7 @@ void print_alternate(PACKAGE *package)
 
         if (match.length() == 0) break;
 
-        searching.search_hits.push_back(index);
+        searching->search_hits.push_back(index);
 
         wprintw(alternate_window, "%s", rest.substr(0, match_position).c_str());
 
@@ -1000,7 +1005,7 @@ void change_alternate_window()
 void render_package_bar()
 {
   const USHORT package_bar_length = (alternate_window ? COLS / 2 - 1: COLS) - 13;
-  const string search_string = searching.package.string;
+  const string search_string = searching->package.string;
   const bool filtered = search_string.length() > 0;
   string package_bar_info;
 
