@@ -62,3 +62,8 @@ string escape_slashes(string str)
   regex slash ("/");
   return regex_replace(str, slash, "\\/");
 }
+
+bool starts_with(string haystack, string needle)
+{
+  return haystack.rfind(needle, 0) != string::npos;
+}

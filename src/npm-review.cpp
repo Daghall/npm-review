@@ -44,7 +44,7 @@ regex dependency_root_pattern ("^(└|├)");
 
 int main(int argc, const char *argv[])
 {
-  string search_string;
+  string initial_search_string;
 
   while (--argc > 0) {
     switch (argv[argc][0]) {
@@ -69,13 +69,13 @@ int main(int argc, const char *argv[])
         }
         break;
       case '/':
-        search_string = argv[argc];
+        initial_search_string = argv[argc];
         break;
     }
   }
   searching = new Search(&alternate_window);
-  if (search_string != "") {
-    searching->package.string = search_string.substr(1);
+  if (initial_search_string != "") {
+    searching->package.string = initial_search_string.substr(1);
   }
 
   initialize();
@@ -137,8 +137,7 @@ int main(int argc, const char *argv[])
 
     wclear(package_window);
 
-    const string *search_string = searching->get_active_string();
-    if (*search_string != "" && !is_message_shown()) {
+    if (*searching->get_active_string() != "" && !is_message_shown()) {
       searching->show_search_string();
     }
 
@@ -455,7 +454,6 @@ int main(int argc, const char *argv[])
     if (searching->is_search_mode()) {
       debug_key(character, "search");
       refresh_packages = true;
-      string *search_string = searching->get_active_string();
 
       switch (character) {
         case ctrl('c'):
@@ -472,8 +470,8 @@ int main(int argc, const char *argv[])
           hide_cursor();
           raise(SIGTSTP);
         case '\n':
-          searching->disable();
-          if (*search_string == "") {
+          searching->finilize();
+          if (*searching->get_active_string() == "") {
             show_error_message("Ignoring empty pattern");
           }
           hide_cursor();
@@ -483,7 +481,7 @@ int main(int argc, const char *argv[])
         case '\b': {
           if (cursor_position > 1) {
             --cursor_position;
-            search_string->erase(cursor_position - 1, 1);
+            searching->update_search_string(cursor_position);
             clear_message();
             searching->show_search_string();
             if (alternate_window) {
@@ -506,10 +504,15 @@ int main(int argc, const char *argv[])
             ++cursor_position;
           }
           break;
+        case KEY_UP:
+          cursor_position = searching->history_prev();
+          break;
+        case KEY_DOWN:
+          cursor_position = searching->history_next();
+          break;
         default:
           if (is_printable(character)) {
-            search_string->insert(cursor_position - 1, 1, character);
-            ++cursor_position;
+            searching->update_search_string(cursor_position++, character);
             searching->show_search_string();
             if (alternate_window) {
               print_alternate();
@@ -681,12 +684,10 @@ int main(int argc, const char *argv[])
           }
           break;
         case '?':
-          cursor_position = searching->get_active_string()->length() + 1;
-          searching->initialize_search(true);
+          cursor_position = searching->initialize_search(true);
           break;
         case '/':
-          cursor_position = searching->get_active_string()->length() + 1;
-          searching->initialize_search();
+          cursor_position = searching->initialize_search();
           break;
       }
     } else { // Package window
@@ -778,12 +779,10 @@ int main(int argc, const char *argv[])
           refresh_packages = true;
           break;
         case '?':
-          cursor_position = searching->get_active_string()->length() + 1;
-          searching->initialize_search(true);
+          cursor_position = searching->initialize_search(true);
           break;
         case '/':
-          cursor_position = searching->get_active_string()->length() + 1;
-          searching->initialize_search();
+          cursor_position = searching->initialize_search();
           break;
         case 'V':
           selected_package = 0;
@@ -1018,7 +1017,7 @@ void render_package_bar()
     char x_of_y[32];
     snprintf(x_of_y, 32, "%d/%-*zu", selected_package + 1, package_number_width, filtered_packages.size());
 
-    if (search_string.length() > 0) {
+    if (filtered) {
       const size_t len = strlen(x_of_y);
       snprintf(x_of_y + len, 32, " (%zu)", pkgs.size());
     }

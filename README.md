@@ -8,8 +8,8 @@ Heavily inspired by [tig](https://github.com/jonas/tig).
 
 ## Flags
 
-  - `-p <package name>` – Specify a package name to use instead of `package.json`. Opens [version check](#version-enter) view directly
-  - `-V` – Initialize with [version check](#version-check-v)
+  - `-p <package name>` – Specify a package name to use instead of `package.json`. Opens [version check](#versions-check-v) view directly
+  - `-V` – Initialize with [version check](#versions-check-v)
   - See [development](#development) for more
 
 ## Key-bindings
@@ -43,6 +43,8 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `?`  | Start regex filtering/highlighting in the _package_/_alternate_ window |
 |      `n`  | Jump to next search hit |
 |      `N`  | Jump to previous search hit |
+|      ⬆️    | When _searching_: use previous search term |
+|      ⬇️    | When _searching_: use next search term |
 | `ctrl-e`  | Scroll the active window up one row |
 | `ctrl-y`  | Scroll the active window down one row |
 | `ctrl-d`  | Scroll the active window up half a screen |
@@ -57,6 +59,7 @@ Pressing `Enter` exits search mode, keeping the filtering.
 
 Press `Esc` or `ctrl-c` (while in search mode) to clear pattern and exit search mode, showing everything.
 
+See also: [Searching](#searching).
 
 
 ### Initialize with search
@@ -117,6 +120,20 @@ Searching with `/` jumps down on "next" and up on "previous", while `?` is the o
 
 Search jumping wraps when it hits top or bottom.
 
+See also: [Searching](#searching).
+
+
+## Searching
+- History items are stored in a hidden file in the users home directory:
+  `~/.npm-version-history`
+- The latest 50 searches are saved
+- Searching for an item already in the list moves it to the front
+- Prefixes can be used to narrow down the history
+- Pressing the up/down keys switches between previous search history, in
+  chronological order
+- When starting a search, the empty string is used, initially. Pressing
+  the up-arrow once uses the currently (or previously) used
+  filter/search
 
 ## Prerequisites
 
