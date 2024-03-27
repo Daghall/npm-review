@@ -15,6 +15,10 @@ const char *INFO_STRING = {
 #include "../build/info"
 };
 
+const char *VERSIONS_STRING = {
+#include "../build/versions"
+};
+
 CACHES *caches = get_caches();
 
 using namespace std;
@@ -81,8 +85,7 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_
     return fake_response;
   } else { // }}}
     char command[COMMAND_SIZE];
-    // TODO: Break out to script file:
-    snprintf(command, COMMAND_SIZE, "npm info %s versions --json | jq 'if (type == \"array\") then reverse | .[] else . end' -r", package.name.c_str());
+    snprintf(command, COMMAND_SIZE, VERSIONS_STRING, package.name.c_str());
     return get_from_cache(package.name, command, alternate_mode);
   }
 }

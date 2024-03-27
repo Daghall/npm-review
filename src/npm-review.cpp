@@ -832,7 +832,7 @@ void get_all_versions()
   // TODO: Key-binding to install the latest minor/major?
   // ctrl-a?
 
-  getch_blocking_mode(false); // TODO: Move to get_all_versions()
+  getch_blocking_mode(false);
 
   if (selected_package == 0) {
     init_alternate_window();
@@ -911,7 +911,6 @@ void print_alternate(PACKAGE *package)
 
   regex search_regex;
   try {
-    // TODO: Show error message?
     search_regex = searching->alternate.string;
   } catch (const regex_error &e) {
     debug("Regex error: %s\n", e.what());
