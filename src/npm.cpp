@@ -86,6 +86,10 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_
   } else { // }}}
     char command[COMMAND_SIZE];
     snprintf(command, COMMAND_SIZE, VERSIONS_STRING, package.name.c_str());
+    if (alternate_mode != VERSION_CHECK) {
+      init_alternate_window();
+    }
+
     return get_from_cache(package.name, command, alternate_mode);
   }
 }
@@ -131,6 +135,7 @@ void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &se
   } else { // }}}
     char command[COMMAND_SIZE];
     snprintf(command, COMMAND_SIZE, DEPENDENCIES_STRING, package_name.c_str(), "^$");
+    init_alternate_window();
     vector<string> dependency_data = get_from_cache(package_name, command, DEPENDENCIES);
 
     if (show_sub_dependencies) {
@@ -182,6 +187,7 @@ void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_a
   } else { // }}}
     char command[COMMAND_SIZE];
     snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), package_version, package_version);
+    init_alternate_window();
     alternate_rows = get_from_cache(package_name, command, INFO);
   }
   selected_alternate_row = 0;

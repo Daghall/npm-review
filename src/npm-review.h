@@ -31,7 +31,7 @@ void render_alternate_bar();
 void skip_empty_rows(USHORT &start_alternate, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
-void init_alternate_window(bool show_loading_message = false);
+void init_alternate_window(bool show_loading_message = true);
 void package_window_up();
 void package_window_down();
 void alternate_window_up();

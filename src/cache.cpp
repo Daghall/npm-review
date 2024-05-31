@@ -42,14 +42,9 @@ vector<string> get_from_cache(string package_name, char* command, enum alternate
 
   if (cache_data != cache->end()) {
     debug("Cache HIT for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string(alternate_mode));
-    // TODO: This feels inappropriate here. Clean it up
-    init_alternate_window();
   } else {
     debug("Cache MISS for \"%s\" (%s)\n", package_name.c_str(), alternate_mode_to_string(alternate_mode));
     // TODO: This feels inappropriate here. Clean it up
-    if (alternate_mode != VERSION_CHECK) {
-      init_alternate_window(true);
-    }
     cache_data = cache->insert(cache->begin(), cache_item (package_name, shell_command(command)));
   }
 

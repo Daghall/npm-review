@@ -835,7 +835,7 @@ void get_all_versions()
   getch_blocking_mode(false);
 
   if (selected_package == 0) {
-    init_alternate_window();
+    init_alternate_window(false);
     alternate_rows.clear();
     alternate_mode = VERSION_CHECK;
     selected_alternate_row = 0;
