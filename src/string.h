@@ -8,6 +8,7 @@ vector<std::string> split_string(string package_string);
 string get_major(string semver);
 const USHORT number_width(USHORT number);
 const char* alternate_mode_to_string(enum alternate_modes alternate_mode);
+const char* main_mode_to_string(enum main_modes main_mode);
 bool is_printable(char character);
 string escape_slashes(string str);
 bool starts_with(string haystack, string needle);

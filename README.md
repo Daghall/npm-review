@@ -26,11 +26,12 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `Q`  | Exit |
 |  `Enter`  | Show versions, or `npm install` selected version |
 |      `D`  | `npm uninstall` selected package |
+|      `I`  | Interactive fuzzy-find install package |
 |      `V`  | Check version of all packages against latest |
 |      `i`  | `npm info` of the selected package |
-|      `I`  | Show dependencies for selected package |
 |      `l`  | Show more of dependencies (expand tree) |
 |      `h`  | Show less of dependencies (contract tree, or close) |
+|      `p`  | Go to Package view (from Install view) |
 |     `gg`  | Move to the first item in the active window |
 |     `gj`  | Move to the next **lower** major _version_, _dependency_ root branch, _info_ paragraph or down |
 |     `gk`  | Move to the next **higher** major _version_, _dependency_ root branch, _info_ paragraph or up |
@@ -159,7 +160,7 @@ brew install ncurses jq gawk
 
 Git clone this repo and run:
 
-```
+```bash
 make install
 ```
 
@@ -168,9 +169,10 @@ to install the binary under `/usr/local/bin`.
 
 Now navigate to a directory containing a `package.json` and run
 
-```
+```bash
 npm-review
 ```
+
 
 ## Caveats
 
@@ -182,3 +184,17 @@ There are two flags that can be helpful when developing:
 
   - `-d` – Activates debug-mode that writes log messages to `./log`
   - `-f` – Fakes the HTTP request data, making offline development easier
+
+### Fake search route
+
+To do offline testing of the installation searching, install dependencies, and
+run the web server found in the `http` folder:
+
+```bash
+cd http
+npm ci
+npm run dev
+```
+
+Now it is possible to do an incremental search of the string `exp-config`.
+All other strings will give an empty result.

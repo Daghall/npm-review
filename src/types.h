@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct {
   USHORT name;
+  USHORT search;
   USHORT version;
 } MAX_LENGTH;
 
@@ -36,6 +37,12 @@ enum alternate_modes {
   DEPENDENCIES,
   INFO,
   VERSION_CHECK,
+};
+
+enum main_modes {
+  INSTALL,
+  PACKAGES,
+  FILTERED,
 };
 
 #endif // _TYPES_H

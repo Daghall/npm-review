@@ -13,6 +13,9 @@ version=$(
 # The <BR> stuff is to have the exact same output when running the
 # script standalone as compiled into the binary, since newlines are
 # removed in the Makefile.
+#
+# When getting info in the install mode, the current version is not available,
+# so it is hidden.
 
 # TODO: Handle invalid installations. For example:
 # datadog-metrics               0.11.0 invalid: "~0.11.1" from the root project
@@ -23,8 +26,14 @@ npm info $package --json 2> /dev/null | \
 \(.name) | \(.license.type? // .license)<BR>
 \(.description)<BR><BR>
 
-CURRENT<BR>
-'$version' (\(.time["'$version'"] | split("T") | .[0]))<BR><BR>
+\(
+  if "'$version'" != "null" then
+    "CURRENT<BR>
+    '$version' (\(.time["'$version'"] | split("T") | .[0]))<BR><BR>"
+  else
+    ""
+  end
+)
 
 LATEST<BR>
 \(.version) (\(.time[.version] | split("T") | .[0]))<BR><BR>

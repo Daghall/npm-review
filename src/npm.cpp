@@ -5,6 +5,7 @@
 #include "npm.h"
 #include "shell.h"
 #include "string.h"
+#include "search.h"
 #include "types.h"
 
 const char *DEPENDENCIES_STRING = {
@@ -17,6 +18,10 @@ const char *INFO_STRING = {
 
 const char *VERSIONS_STRING = {
 #include "../build/versions"
+};
+
+const char *NPM_SEARCH_STRING = {
+#include "../build/npm-search"
 };
 
 CACHES *caches = get_caches();
@@ -154,7 +159,7 @@ void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &se
   print_alternate(&package);
 }
 
-void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_alternate_row, bool fake_http_requests)
+void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_alternate_row, bool fake_http_requests, main_modes main_mode)
 {
   string package_name = escape_slashes(package.name);
   const char* package_version = package.version.c_str();
@@ -186,7 +191,8 @@ void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_a
     alternate_rows.push_back("express, express3, handlebars, view, layout, partials, templates");
   } else { // }}}
     char command[COMMAND_SIZE];
-    snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), package_version, package_version);
+    const char* version = main_mode == INSTALL ? "null" : package_version;
+    snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), version, version, version);
     init_alternate_window();
     alternate_rows = get_from_cache(package_name, command, INFO);
   }
@@ -194,6 +200,7 @@ void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_a
   print_alternate(&package);
 }
 
+// TODO: Support install of dev depedencies. Shift-D?
 void install_package(PACKAGE &package, const string new_version, short &selected_alternate_row, vector<PACKAGE> &pkgs)
 {
   // Move to last line to make `npm install` render here
@@ -250,5 +257,41 @@ void uninstall_package(PACKAGE package, vector<PACKAGE> &pkgs)
   } else {
     debug("Uninstall failed: %d\n", exit_code);
     show_error_message("Uninstall failed");
+  }
+}
+
+void search_for_package(MAX_LENGTH &max_length, vector<PACKAGE> &filtered_packages, Search *searching, USHORT &selected_package, bool fake_http_requests) {
+  char command[COMMAND_SIZE];
+  const string host = fake_http_requests ? "http://localhost:3000" : "https://api.npms.io";
+  debug("NPM_SEARCH_STRING=%s\n", NPM_SEARCH_STRING);
+  if (searching->is_search_mode() && searching->package.string.length() > 0) {
+    filtered_packages.clear();
+    snprintf(command, COMMAND_SIZE, NPM_SEARCH_STRING, "-q", host.c_str(), to_string(LIST_HEIGHT).c_str(), searching->package.string.c_str());
+    debug("Get string: %s\n", command);
+    vector<string> s = get_from_cache(searching->package.string, command);
+    vector<string>::iterator it = s.begin();
+
+    max_length.search = 0;
+
+    // NOTE: The total is printed by the script, but not used, so the first
+    // item is skipped by the initial `++it`
+
+    while (++it != s.end()) {
+      debug("Install search: %s | %s \n", (*it).c_str(), (*(it + 1)).c_str());
+      max_length.search = max(max_length.search, (USHORT)(*it).length());
+      filtered_packages.push_back({
+        .name = *it,
+        .version = *(++it),
+      });
+    }
+    selected_package = 0;
+  }
+}
+
+void abort_install(main_modes &main_mode, USHORT &selected_package) {
+  if (main_mode == INSTALL) {
+    main_mode = PACKAGES;
+    show_message("Install aborted");
+    selected_package = 0;
   }
 }

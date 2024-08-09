@@ -52,6 +52,18 @@ const char* alternate_mode_to_string(enum alternate_modes alternate_mode)
   }
 }
 
+const char* main_mode_to_string(enum main_modes main_mode)
+{
+  switch (main_mode) {
+    case INSTALL:
+      return "install";
+    case PACKAGES:
+      return "packages";
+    case FILTERED:
+      return "filtered";
+    }
+}
+
 bool is_printable(char character)
 {
   return character >= 0x20 && character < 0x7F;

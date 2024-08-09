@@ -1,5 +1,9 @@
+#include <algorithm>
+#include <cstdarg>
+#include <cstdlib>
 #include <regex>
 #include <signal.h>
+#include <string>
 
 #include "debug.h"
 #include "ncurses.h"
@@ -8,6 +12,7 @@
 #include "search.h"
 #include "shell.h"
 #include "string.h"
+
 
 using namespace std;
 
@@ -30,6 +35,7 @@ USHORT start_alternate = 0;
 USHORT start_packages = 0;
 
 enum alternate_modes alternate_mode;
+enum main_modes main_mode = PACKAGES;
 bool show_sub_dependencies = false;
 bool refresh_packages = true;
 
@@ -41,9 +47,7 @@ USHORT cursor_position = 1;
 
 regex dependency_root_pattern ("^(└|├)");
 
-
-int main(int argc, const char *argv[])
-{
+int main(int argc, const char *argv[]) {
   string initial_search_string;
 
   while (--argc > 0) {
@@ -115,12 +119,17 @@ int main(int argc, const char *argv[])
 
     // Filtering packages
     try {
-      regex search_regex (searching->package.string);
-      regex_parse_error = "";
+      if (main_mode == INSTALL) {
+        debug("Install mode\n");
+        search_for_package(max_length, filtered_packages, searching, selected_package, fake_http_requests);
+      } else {
       filtered_packages.clear();
-      copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
-        return regex_search(package.name, search_regex);
-      });
+        regex search_regex (searching->package.string);
+        regex_parse_error = "";
+        copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
+          return regex_search(package.name, search_regex);
+        });
+      }
     } catch (const regex_error &e) {
       regex_parse_error = e.what();
     }
@@ -151,7 +160,8 @@ int main(int argc, const char *argv[])
       if (package_index == selected_package) {
         wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
       }
-      wprintw(package_window, " %-*s  %-*s%-*s \n", max_length.name, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
+      const USHORT name_max_length = main_mode == INSTALL ? max_length.search : max_length.name;
+      wprintw(package_window, " %-*s  %-*s%-*s \n", name_max_length, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
       ++package_index;
     });
 
@@ -464,6 +474,7 @@ int main(int argc, const char *argv[])
           if (alternate_window) {
             print_alternate();
           }
+          abort_install(main_mode, selected_package);
           break;
         case ctrl('z'):
           searching->disable();
@@ -473,6 +484,7 @@ int main(int argc, const char *argv[])
           searching->finilize();
           if (*searching->get_active_string() == "") {
             show_error_message("Ignoring empty pattern");
+            abort_install(main_mode, selected_package);
           }
           hide_cursor();
           break;
@@ -489,8 +501,11 @@ int main(int argc, const char *argv[])
             }
           } else {
             searching->disable();
+            selected_package = 0;
             clear_message();
             hide_cursor();
+
+            abort_install(main_mode, selected_package);
           }
           break;
         }
@@ -712,9 +727,14 @@ int main(int argc, const char *argv[])
         case 'i':
           if (filtered_packages.size() == 0) continue;
           alternate_mode = INFO;
-          get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests);
+          get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests, main_mode);
           break;
         case 'I':
+          cursor_position = searching->initialize_search();
+          main_mode = INSTALL;
+          filtered_packages.clear();
+          refresh_packages = true;
+          break;
         case 'l':
           if (filtered_packages.size() == 0) continue;
           alternate_mode = DEPENDENCIES;
@@ -764,6 +784,13 @@ int main(int argc, const char *argv[])
             selected_package = start_packages + LIST_HEIGHT - 1;
           }
           refresh_packages = true;
+          break;
+        case 'p':
+          if (main_mode == INSTALL) {
+            main_mode = PACKAGES;
+            searching->clear();
+            refresh_packages = true;
+          }
           break;
         case ctrl('c'):
         case 'q':
@@ -902,6 +929,10 @@ void print_alternate(PACKAGE *package)
     package = &filtered_packages.at(selected_package);
   }
 
+  if (selected_alternate_row < 0 && main_mode == INSTALL) {
+    selected_alternate_row = 0;
+  }
+
   string package_version = package->version;
   const int alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
   size_t index = 0;
@@ -920,7 +951,7 @@ void print_alternate(PACKAGE *package)
   searching->search_hits.clear();
 
   for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color](const string &row) {
-    if (row == package_version) {
+    if (row == package_version && alternate_mode == VERSION) {
       wattron(alternate_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
       color = COLOR_CURRENT_VERSION;
       if (selected_alternate_row < 0) {
@@ -970,7 +1001,7 @@ void print_alternate(PACKAGE *package)
       wprintw(alternate_window," %-*s \n", 512, row.c_str());
     }
 
-    if (row == package_version) {
+    if (row == package_version && alternate_mode == VERSION) {
       wattroff(alternate_window, A_STANDOUT);
       wattron(alternate_window, COLOR_PAIR(COLOR_ERROR));
       color = COLOR_ERROR;
@@ -991,7 +1022,7 @@ void change_alternate_window()
     get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, true, show_sub_dependencies, fake_http_requests);
     break;
   case INFO:
-    get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests);
+    get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests, main_mode);
     break;
   case VERSION_CHECK:
     selected_alternate_row = selected_package;
@@ -1004,8 +1035,13 @@ void render_package_bar()
 {
   const USHORT package_bar_length = (alternate_window ? COLS / 2 - 1: COLS) - 13;
   const string search_string = searching->package.string;
-  const bool filtered = search_string.length() > 0;
+  bool filtered = false;
   string package_bar_info;
+
+  if (main_mode != INSTALL) {
+    main_mode = filtered ? FILTERED : PACKAGES;
+    filtered = search_string.length() > 0;
+  }
 
   if (regex_parse_error.length() > 0) {
     package_bar_info = regex_parse_error;
@@ -1028,7 +1064,7 @@ void render_package_bar()
   if (alternate_mode != DEPENDENCIES) {
     mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
   }
-  mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", filtered ? "filtered" : "packages", package_bar_length, package_bar_info.c_str());
+  mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", main_mode_to_string(main_mode), package_bar_length, package_bar_info.c_str());
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 

@@ -31,7 +31,7 @@ debug: build
 debug: CFLAGS += -g
 
 install: build
-	cp npm-review /usr/local/bin
+	cp npm-review /opt/homebrew/bin/
 
 watch: debug
 	@echo ""
