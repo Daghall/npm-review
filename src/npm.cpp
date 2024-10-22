@@ -200,8 +200,7 @@ void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_a
   print_alternate(&package);
 }
 
-// TODO: Support install of dev depedencies. Shift-D?
-void install_package(PACKAGE &package, const string new_version, short &selected_alternate_row, vector<PACKAGE> &pkgs)
+void install_package(PACKAGE &package, const string new_version, short &selected_alternate_row, vector<PACKAGE> &pkgs, bool install_dev_dependency)
 {
   // Move to last line to make `npm install` render here
   show_message("");
@@ -212,7 +211,7 @@ void install_package(PACKAGE &package, const string new_version, short &selected
   caches->info->erase(package_name);
 
   char command[COMMAND_SIZE];
-  snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent", package.name.c_str(), new_version.c_str());
+  snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent %s", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "--save-dev" : "--save");
   int exit_code = sync_shell_command(command, [](char* line) {
     debug("NPM INSTALL: %s\n", line);
   });
@@ -220,8 +219,8 @@ void install_package(PACKAGE &package, const string new_version, short &selected
   hide_cursor();
 
   if (exit_code == OK) {
-    debug("Installed \"%s@%s\"\n", package.name.c_str(), new_version.c_str());
-    show_message("Installed \"" + package.name + "@" + new_version + "\"");
+    debug("Installed \"%s@%s\" %s\n", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "(DEV)" : "");
+    show_message("Installed \"" + package.name + "@" + new_version + "\"" + (install_dev_dependency ? " (DEV)" : ""));
     package.version = new_version;
     read_packages(nullptr, &pkgs);
     selected_alternate_row = -1;

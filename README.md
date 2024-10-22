@@ -25,7 +25,7 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `q`  | Close the active window (exit if in _package_ window) |
 |      `Q`  | Exit |
 |  `Enter`  | Show versions, or `npm install` selected version |
-|      `D`  | `npm uninstall` selected package |
+|      `D`  | `npm uninstall` selected package, or install as development dependency |
 |      `I`  | Interactive fuzzy-find install package |
 |      `V`  | Check version of all packages against latest |
 |      `i`  | `npm info` of the selected package |

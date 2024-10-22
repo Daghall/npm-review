@@ -12,6 +12,7 @@
 #include "search.h"
 #include "shell.h"
 #include "string.h"
+#include "types.h"
 
 
 using namespace std;
@@ -539,6 +540,8 @@ int main(int argc, const char *argv[]) {
       debug_key(character, "alternate window");
       clear_message();
 
+      bool install_dev_dependency = false;
+
       switch (character) {
         case ctrl('z'):
           raise(SIGTSTP);
@@ -669,10 +672,16 @@ int main(int argc, const char *argv[]) {
         case ctrl('c'):
         case 'Q':
           return exit();
+        case 'D':
+          if (main_mode != INSTALL) {
+            show_error_message("Development dependency install is only available for new packages");
+            break;
+          }
+          install_dev_dependency = true;
         case '\n':
           switch (alternate_mode) {
             case VERSION:
-              install_package(filtered_packages.at(selected_package), alternate_rows.at(selected_alternate_row), selected_alternate_row, pkgs);
+              install_package(filtered_packages.at(selected_package), alternate_rows.at(selected_alternate_row), selected_alternate_row, pkgs, install_dev_dependency);
               refresh_packages = true;
               break;
             case DEPENDENCIES:
@@ -746,6 +755,11 @@ int main(int argc, const char *argv[]) {
           print_versions(filtered_packages.at(selected_package));
           break;
         case 'D': {
+          if (main_mode == INSTALL) {
+            // TODO: Install @latest instead - prompt?
+            show_error_message("Only installed packages can be uninstalled");
+            break;
+          }
           if (filtered_packages.size() == 0) continue;
           PACKAGE package = filtered_packages.at(selected_package);
           uninstall_package(package, pkgs);
