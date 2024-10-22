@@ -202,8 +202,7 @@ void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_a
 
 void install_package(PACKAGE &package, const string new_version, short &selected_alternate_row, vector<PACKAGE> &pkgs, bool install_dev_dependency)
 {
-  // Move to last line to make `npm install` render here
-  show_message("");
+  show_message("Installing...");
 
   string package_name = escape_slashes(package.name);
 
@@ -219,8 +218,8 @@ void install_package(PACKAGE &package, const string new_version, short &selected
   hide_cursor();
 
   if (exit_code == OK) {
-    debug("Installed \"%s@%s\" %s\n", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "(DEV)" : "");
-    show_message("Installed \"" + package.name + "@" + new_version + "\"" + (install_dev_dependency ? " (DEV)" : ""));
+    debug("Installed %s@%s %s\n", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "(DEV)" : "");
+    show_message("Installed " + package.name + "@" + new_version + (install_dev_dependency ? " (DEV)" : ""));
     package.version = new_version;
     read_packages(nullptr, &pkgs);
     selected_alternate_row = -1;
@@ -237,8 +236,7 @@ void uninstall_package(PACKAGE package, vector<PACKAGE> &pkgs)
     return;
   }
 
-  // Move to last line to make `npm install` render here
-  show_message("");
+  show_message("Uninstalling...");
 
   char command[COMMAND_SIZE];
   snprintf(command, COMMAND_SIZE, "npm uninstall %s --silent", package.name.c_str());
