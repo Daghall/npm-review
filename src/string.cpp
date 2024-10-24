@@ -1,7 +1,6 @@
-#include <cstdarg>
 #include <regex>
 #include <stdio.h>
-#include "npm-review.h"
+#include "types.h"
 
 vector<string> split_string(string package_string)
 {

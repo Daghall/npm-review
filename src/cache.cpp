@@ -1,8 +1,5 @@
-#include <cstdarg>
-#include <stdio.h>
 #include "cache.h"
 #include "debug.h"
-#include "npm-review.h"
 #include "shell.h"
 #include "string.h"
 #include "types.h"

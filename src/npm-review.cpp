@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cstdarg>
 #include <cstdlib>
 #include <regex>
 #include <signal.h>
@@ -10,7 +9,6 @@
 #include "npm.h"
 #include "npm-review.h"
 #include "search.h"
-#include "shell.h"
 #include "string.h"
 #include "types.h"
 
