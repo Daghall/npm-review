@@ -1,0 +1,31 @@
+diff --git i/package.json w/package.json
+index 52ec82a0..ae6b6091 100644
+--- i/package.json
++++ w/package.json
+@@ -42 +42 @@
+     "@bonniernews/exp-logger": 
+-"~3.0.0",
++"~3.0.2",
+~
+@@ -45 +45 @@
+     "csrf-csrf": 
+-"~3.0.6",
++"~3.0.8",
+~
+@@ -48 +47,0 @@
+-    "exp-config": "~2.0.1",
+~
+@@ -58,2 +57,2 @@
+     
++"run-pace": "~2.1.0",
+~
+     "theoplayer": 
+-"~6.13.0",
+~
+-    "uuid": "~8.3.2"
++"~6.13.0"
+~
+@@ -68,0 +68 @@
+     
++"date-differ": "~1.0.2",
+~

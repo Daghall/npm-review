@@ -51,5 +51,8 @@ includes:
 		> $(BUILD_DIR)/$$(basename $$file .sh); \
 	done
 
+test:
+	@./tests/run-tests.sh
+
 clean:
 	rm -rf build/
