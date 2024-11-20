@@ -33,8 +33,12 @@ debug: CFLAGS += -g
 install: build
 	cp npm-review /opt/homebrew/bin/
 
-watch: debug
+_watch: debug
 	@echo ""
+
+watch:
+	@printf "Watching for changes...\n\n"
+	@fswatch src/ --event Updated --one-per-batch | xargs -I @ make _watch
 
 includes:
 	@mkdir -p $(BUILD_DIR)
