@@ -156,12 +156,17 @@ int main(int argc, const char *argv[]) {
     // Render packages
     for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
-      if (package_index == selected_package) {
-        wattron(package_window, COLOR_PAIR(COLOR_SELECTED_PACKAGE));
+      wattroff(package_window, A_STANDOUT | A_BOLD);
+
+      if (package_index++ == selected_package) {
+        wattron(package_window, A_STANDOUT);
+      }
+
+      if (package.original_version != "") {
+        wattron(package_window, COLOR_PAIR(COLOR_EDITED_PACKAGE) | A_BOLD);
       }
       const USHORT name_max_length = main_mode == INSTALL ? max_length.search : max_length.name;
       wprintw(package_window, " %-*s  %-*s%-*s \n", name_max_length, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
-      ++package_index;
     });
 
     // Package scrolling
@@ -186,7 +191,7 @@ int main(int argc, const char *argv[]) {
       --start_alternate;
     }
 
-    // Render bottom bar
+    // Render bottom bars
     render_package_bar();
 
     if (alternate_window) {
@@ -412,7 +417,6 @@ int main(int argc, const char *argv[]) {
                 alternate_window_up();
               }
               break;
-                break;
             }
           case H("zt"):
             start_alternate = selected_alternate_row;
@@ -730,7 +734,6 @@ int main(int argc, const char *argv[]) {
         case 'K':
           package_window_up();
           break;
-          break;
         case 'i':
           if (filtered_packages.size() == 0) continue;
           alternate_mode = INFO;
@@ -752,7 +755,8 @@ int main(int argc, const char *argv[]) {
           alternate_mode = VERSION;
           print_versions(filtered_packages.at(selected_package));
           break;
-        case 'D': {
+        case 'D':
+        {
           if (main_mode == INSTALL) {
             // TODO: Install @latest instead - prompt?
             show_error_message("Only installed packages can be uninstalled");
@@ -962,7 +966,7 @@ void print_alternate(PACKAGE *package)
   USHORT color = COLOR_DEFAULT;
   searching->search_hits.clear();
 
-  for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color](const string &row) {
+  for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color, &package](const string &row) {
     if (row == package_version && alternate_mode == VERSION) {
       wattron(alternate_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
       color = COLOR_CURRENT_VERSION;
@@ -1010,7 +1014,12 @@ void print_alternate(PACKAGE *package)
       const string rest (start - prev, row.cend());
       wprintw(alternate_window, "%-*s\n", 512 - prev, rest.substr(prev).c_str());
     } else {
-      wprintw(alternate_window," %-*s \n", 512, row.c_str());
+      string str = row;
+
+      if (alternate_mode == VERSION && str == package->original_version) {
+        str += " [committed]";
+      }
+      wprintw(alternate_window," %-*s \n", 512, str.c_str());
     }
 
     if (row == package_version && alternate_mode == VERSION) {

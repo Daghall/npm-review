@@ -6,9 +6,6 @@
 
 using namespace std;
 
-// Stringify, used in the Makefile to build include files
-#define STR(x) #x
-
 // Functions
 
 // Simple "hash" function to convert a string of [a-z] characters into an int,

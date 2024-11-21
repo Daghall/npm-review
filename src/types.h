@@ -7,16 +7,24 @@
 
 using namespace std;
 
+// Stringify, used in the Makefile to build include files
+#define STR(x) #x
+
 typedef unsigned short USHORT;
 
 #define CACHE_TYPE string, vector<string>
 typedef pair<CACHE_TYPE> cache_item;
 typedef map<CACHE_TYPE> cache_type;
 
+#define VERSION_TYPE string, string
+typedef pair<VERSION_TYPE> version_item;
+typedef unordered_map<VERSION_TYPE> version_type;
+
 typedef struct {
   string name;
   string version;
   bool is_dev;
+  string original_version;
 } PACKAGE;
 
 typedef struct {

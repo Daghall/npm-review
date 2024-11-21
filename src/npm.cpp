@@ -2,10 +2,11 @@
 #include <regex>
 #include "cache.h"
 #include "debug.h"
+#include "git.h"
 #include "npm.h"
+#include "search.h"
 #include "shell.h"
 #include "string.h"
-#include "search.h"
 #include "types.h"
 
 const char *DEPENDENCIES_STRING = {
@@ -35,14 +36,21 @@ void read_packages(MAX_LENGTH *max_length, vector<PACKAGE> *pkgs)
   vector<string> packages = shell_command(command);
   pkgs->clear();
 
-  for_each(packages.begin(), packages.end(), [&max_length, &pkgs](string &package) {
+  version_type diff_versions = get_diff_versions();
+
+  for_each(packages.begin(), packages.end(), [&max_length, &pkgs, &diff_versions](string &package) {
     const vector<string> strings = split_string(package);
     string name = strings.at(0);
     string version = strings.at(1);
     string origin = strings.at(2);
+
+    const version_type::iterator version_item = diff_versions.find(name);
+    const string original_version = version_item != diff_versions.end() ? version_item->second : "";
+
     pkgs->push_back({
       .name = name,
       .version = version,
+      .original_version = original_version,
       .is_dev = origin == ".devDependencies"
     });
 
@@ -223,7 +231,9 @@ void install_package(PACKAGE &package, const string new_version, short &selected
     package.version = new_version;
     read_packages(nullptr, &pkgs);
     selected_alternate_row = -1;
-    print_alternate(&package);
+
+    PACKAGE updated_package = find_package(pkgs, package.name);
+    print_alternate(&updated_package);
   } else {
     show_error_message("Installation failed");
     debug("Install failed\n");
@@ -291,4 +301,11 @@ void abort_install(main_modes &main_mode, USHORT &selected_package) {
     show_message("Install aborted");
     selected_package = 0;
   }
+}
+
+PACKAGE find_package(vector<PACKAGE> &pkgs, const string &name)
+{
+  return *find_if(pkgs.begin(), pkgs.end(), [&name](PACKAGE pkg) {
+    return pkg.name == name;
+  });
 }

@@ -26,6 +26,7 @@ void initialize()
   init_pair(COLOR_CURRENT_VERSION, COLOR_GREEN, COLOR_DEFAULT);
   init_pair(COLOR_INFO_BAR, COLOR_DEFAULT, COLOR_BLUE);
   init_pair(COLOR_SEARCH, COLOR_DEFAULT, COLOR_YELLOW);
+  init_pair(COLOR_EDITED_PACKAGE, COLOR_YELLOW, COLOR_DEFAULT);
   debug("Initialized. Columns: %d. Lines: %d\n", COLS, LINES);
 }
 
