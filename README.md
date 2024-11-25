@@ -29,6 +29,7 @@ The active window is the _alternate_ window, if it is displayed, _package_ windo
 |      `I`  | Interactive fuzzy-find install package |
 |      `V`  | Check version of all packages against latest |
 |      `i`  | `npm info` of the selected package |
+|      `u`  | Install the latest (git) committed version of a package |
 |      `l`  | Show more of dependencies (expand tree) |
 |      `h`  | Show less of dependencies (contract tree, or close) |
 |      `p`  | Go to Package view (from Install view) |

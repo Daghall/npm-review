@@ -102,7 +102,6 @@ int main(int argc, const char *argv[]) {
   // TODO: Cache "views"
   // TODO: Help screen
   // TODO: Timeout on network requests?
-  // TODO: "Undo" – install original version
   // TODO: Clear cache and reload from network/disk on ctrl-l
   // TODO: gx – open URL?
 
@@ -695,6 +694,12 @@ int main(int argc, const char *argv[]) {
               break;
           }
           break;
+        case 'u':
+          {
+            PACKAGE package = filtered_packages.at(selected_package);
+            refresh_packages = revert_package(package, pkgs, selected_alternate_row, alternate_mode);
+            break;
+          }
         case 'g':
         case 'z':
           key_sequence = character;
@@ -833,9 +838,18 @@ int main(int argc, const char *argv[]) {
           refresh_packages = true;
           list_versions = true;
           break;
+        case 'u':
+          PACKAGE package = filtered_packages.at(selected_package);
+          refresh_packages = revert_package(package, pkgs, selected_alternate_row, alternate_mode);
+          break;
       }
     }
   }
+}
+
+WINDOW* get_alternate_window()
+{
+  return alternate_window;
 }
 
 void print_versions(PACKAGE package, int alternate_row)
@@ -872,8 +886,7 @@ void init_alternate_window(bool show_loading_message)
 // to make canceling possible.
 void get_all_versions()
 {
-  // TODO: Key-binding to install the latest minor/major?
-  // ctrl-a?
+  // TODO: Key-binding to install the latest minor/major? (ctrl-a?)
 
   getch_blocking_mode(false);
 

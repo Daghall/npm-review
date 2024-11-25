@@ -18,7 +18,7 @@ constexpr int H(const char* str, int sum = 0) {
     : sum;
 }
 
-void initialize();
+WINDOW* get_alternate_window();
 void print_alternate(PACKAGE *package = nullptr);
 void print_versions(PACKAGE package, int alternate_row = -1);
 void get_all_versions();

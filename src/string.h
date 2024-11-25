@@ -2,7 +2,7 @@
 #define _STRING_H
 
 #include <string>
-#include "npm-review.h"
+#include "types.h"
 
 vector<std::string> split_string(string package_string);
 string get_major(string semver);

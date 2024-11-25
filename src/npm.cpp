@@ -8,6 +8,7 @@
 #include "shell.h"
 #include "string.h"
 #include "types.h"
+#include "npm-review.h"
 
 const char *DEPENDENCIES_STRING = {
 #include "../build/dependencies"
@@ -106,7 +107,6 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_
     return get_from_cache(package.name, command, alternate_mode);
   }
 }
-
 
 void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &selected_alternate_row, bool init, bool show_sub_dependencies, bool fake_http_requests)
 {
@@ -232,19 +232,35 @@ void install_package(PACKAGE &package, const string new_version, short &selected
     read_packages(nullptr, &pkgs);
     selected_alternate_row = -1;
 
-    PACKAGE updated_package = find_package(pkgs, package.name);
-    print_alternate(&updated_package);
+    if (get_alternate_window()) {
+      PACKAGE updated_package = find_package(pkgs, package.name);
+      print_alternate(&updated_package);
+    }
   } else {
     show_error_message("Installation failed");
     debug("Install failed\n");
   }
 }
 
+bool revert_package(PACKAGE &package, vector<PACKAGE> &pkgs, short &selected_alternate_row, alternate_modes alternate_mode)
+{
+  if (get_alternate_window() && alternate_mode != VERSION) return false;
+  if (package.original_version == "") {
+    show_message("Already at oldest change");
+    return false;
+  }
+
+  if (confirm("Revert " + package.name + " to " + package.original_version + "?")) {
+    install_package(package, package.original_version, selected_alternate_row, pkgs, false);
+    return true;
+  }
+
+  return false;
+}
+
 void uninstall_package(PACKAGE package, vector<PACKAGE> &pkgs)
 {
-  if (!confirm("Uninstall " + package.name + "?")) {
-    return;
-  }
+  if (!confirm("Uninstall " + package.name + "?")) return;
 
   show_message("Uninstalling...");
 
@@ -267,7 +283,8 @@ void uninstall_package(PACKAGE package, vector<PACKAGE> &pkgs)
   }
 }
 
-void search_for_package(MAX_LENGTH &max_length, vector<PACKAGE> &filtered_packages, Search *searching, USHORT &selected_package, bool fake_http_requests) {
+void search_for_package(MAX_LENGTH &max_length, vector<PACKAGE> &filtered_packages, Search *searching, USHORT &selected_package, bool fake_http_requests)
+{
   char command[COMMAND_SIZE];
   const string host = fake_http_requests ? "http://localhost:3000" : "https://api.npms.io";
   debug("NPM_SEARCH_STRING=%s\n", NPM_SEARCH_STRING);
@@ -295,7 +312,8 @@ void search_for_package(MAX_LENGTH &max_length, vector<PACKAGE> &filtered_packag
   }
 }
 
-void abort_install(main_modes &main_mode, USHORT &selected_package) {
+void abort_install(main_modes &main_mode, USHORT &selected_package)
+{
   if (main_mode == INSTALL) {
     main_mode = PACKAGES;
     show_message("Install aborted");
