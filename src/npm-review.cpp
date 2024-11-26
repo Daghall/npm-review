@@ -199,8 +199,8 @@ int main(int argc, const char *argv[]) {
       debug("Refreshing main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
 
       // Clear the window to remove residual lines when refreshing pad smaller
-      // than the full width
-      for (int i = start_packages - selected_package; i < LIST_HEIGHT; ++i) {
+      // than the full height
+      for (int i = filtered_packages.size() - start_packages; i < LIST_HEIGHT; ++i) {
         move(i, 0);
         clrtoeol();
       }
@@ -222,8 +222,8 @@ int main(int argc, const char *argv[]) {
       debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
 
       // Clear the window to remove residual lines when refreshing pad smaller
-      // than the full width
-      for (int i = start_alternate - selected_alternate_row; i < LIST_HEIGHT; ++i) {
+      // than the full height
+      for (int i = alternate_rows.size() - start_alternate; i < LIST_HEIGHT; ++i) {
         move(i, COLS / 2);
         clrtoeol();
       }
