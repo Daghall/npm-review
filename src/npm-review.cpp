@@ -771,7 +771,7 @@ int main(int argc, const char *argv[]) {
           break;
         }
         case ctrl('e'):
-          ++start_packages;
+          start_packages = min(filtered_packages.size() - 1, (size_t) ++start_packages);
 
           if (start_packages > selected_package) {
             selected_package = start_packages;
