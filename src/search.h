@@ -7,8 +7,6 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 const string HISTORY_FILE_NAME = "~/.npm-review-history";
 const USHORT HISTORY_MAX_SIZE = 50;
 

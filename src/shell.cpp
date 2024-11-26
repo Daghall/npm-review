@@ -2,8 +2,6 @@
 #include "types.h"
 #include <string>
 
-using namespace std;
-
 const  USHORT BUFFER_SIZE = 1024;
 
 vector<string> shell_command(const string command)

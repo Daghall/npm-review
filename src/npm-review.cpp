@@ -12,9 +12,6 @@
 #include "string.h"
 #include "types.h"
 
-
-using namespace std;
-
 bool fake_http_requests = false;
 
 // "Constants"

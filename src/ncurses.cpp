@@ -37,7 +37,6 @@ void show_cursor()
 
 void hide_cursor()
 {
-  show_cursor(); // Explicitly show it to avoid rendering bug after `npm {un,}install`
   curs_set(0);
 }
 

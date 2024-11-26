@@ -6,8 +6,6 @@
 #include "string.h"
 #include "types.h"
 
-using namespace std;
-
 Search::Search(WINDOW **alt_win) {
   alternate_window = alt_win;
   search_mode = false;

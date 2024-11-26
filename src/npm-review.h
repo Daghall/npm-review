@@ -4,8 +4,6 @@
 #include "ncurses.h"
 #include "types.h"
 
-using namespace std;
-
 // Functions
 
 // Simple "hash" function to convert a string of [a-z] characters into an int,

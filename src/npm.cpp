@@ -28,8 +28,6 @@ const char *NPM_SEARCH_STRING = {
 
 CACHES *caches = get_caches();
 
-using namespace std;
-
 void read_packages(MAX_LENGTH *max_length, vector<PACKAGE> *pkgs)
 {
   debug("Reading packages\n");
