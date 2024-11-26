@@ -110,8 +110,6 @@ int main(int argc, const char *argv[]) {
   string key_sequence = "";
 
   while (true) {
-    USHORT package_index = 0;
-
     // Filtering packages
     try {
       if (main_mode == INSTALL) {
@@ -129,6 +127,7 @@ int main(int argc, const char *argv[]) {
       regex_parse_error = e.what();
     }
 
+    // Clamp selected package
     const USHORT number_of_filtered_packages = (USHORT) filtered_packages.size();
 
     if (selected_package > number_of_filtered_packages - 1) {
@@ -139,17 +138,15 @@ int main(int argc, const char *argv[]) {
       }
     }
 
-    wclear(package_window);
-
-    if (*searching->get_active_string() != "" && !is_message_shown()) {
-      searching->show_search_string();
-    }
-
+    // Show key sequence?
     if (key_sequence != "") {
       show_key_sequence(key_sequence);
     }
 
     // Render packages
+    wclear(package_window);
+    USHORT package_index = 0;
+
     for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
       wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
       wattroff(package_window, A_STANDOUT | A_BOLD);
@@ -232,10 +229,16 @@ int main(int argc, const char *argv[]) {
       prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
     }
 
+    // Searching
+    if (*searching->get_active_string() != "" && !is_message_shown()) {
+      searching->show_search_string();
+    }
+
     if (searching->is_search_mode()) {
       move(LAST_LINE, cursor_position);
     }
 
+    // List versions mode
     if (list_versions) {
       get_all_versions();
 
@@ -250,6 +253,7 @@ int main(int argc, const char *argv[]) {
 
     const short character = getch();
 
+    // Handle rezising
     if (character == KEY_RESIZE) {
       clear();
       // TODO: Warn about too small screen? 44 seems to be minimum width
@@ -261,6 +265,7 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
+    // Handle key sequences
     if (key_sequence.length() > 0) {
       key_sequence += character;
       debug("Key sequence: %s (%d)\n", key_sequence.c_str(), H(key_sequence.c_str()));
@@ -460,6 +465,7 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
+    // Handle non-sequences
     if (searching->is_search_mode()) {
       debug_key(character, "search");
       refresh_packages = true;
