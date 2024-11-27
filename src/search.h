@@ -29,6 +29,7 @@ class Search {
   void history_save();
   USHORT history_get(bool next = false);
   SEARCH *get_active_search();
+  USHORT initialize_search(bool reverse);
 
   public:
     SEARCH package;
@@ -37,14 +38,15 @@ class Search {
     Search(WINDOW **alternate_window);
 
     vector<short> search_hits;
-    USHORT initialize_search(bool reverse = false);
     string *get_active_string();
     void show_search_string();
     void update_search_string(USHORT position, char character = '\0');
     bool is_search_mode();
     void enable();
     void disable();
-    void finilize();
+    void finalize();
+    USHORT initialize_search();
+    USHORT initialize_search_reverse();
     void clear();
     void search_hit_prev(short &selected_alternate_row);
     void search_hit_next(short &selected_alternate_row);

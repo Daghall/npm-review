@@ -486,7 +486,7 @@ int main(int argc, const char *argv[]) {
           hide_cursor();
           raise(SIGTSTP);
         case '\n':
-          searching->finilize();
+          searching->finalize();
           if (*searching->get_active_string() == "") {
             show_error_message("Ignoring empty pattern");
             abort_install(main_mode, selected_package);
@@ -718,7 +718,7 @@ int main(int argc, const char *argv[]) {
           }
           break;
         case '?':
-          cursor_position = searching->initialize_search(true);
+          cursor_position = searching->initialize_search_reverse();
           break;
         case '/':
           cursor_position = searching->initialize_search();
@@ -830,7 +830,7 @@ int main(int argc, const char *argv[]) {
           refresh_packages = true;
           break;
         case '?':
-          cursor_position = searching->initialize_search(true);
+          cursor_position = searching->initialize_search_reverse();
           break;
         case '/':
           cursor_position = searching->initialize_search();

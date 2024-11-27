@@ -91,6 +91,20 @@ USHORT Search::history_get(bool next)
   return as->string.length() + 1;
 }
 
+USHORT Search::initialize_search(bool reverse)
+{
+  SEARCH *as = get_active_search();
+  as->string.clear();
+  as->reverse = reverse;
+  search_mode = true;
+  clear_message();
+  show_search_string();
+  show_cursor();
+  filter_string.clear();
+
+  return 1;
+}
+
 
 /*
  * PUBLIC METHODS
@@ -118,7 +132,7 @@ void Search::disable()
   search_mode = false;
 }
 
-void Search::finilize()
+void Search::finalize()
 {
   disable();
   history_save();
@@ -131,18 +145,14 @@ void Search::clear()
   s.string = "";
 }
 
-USHORT Search::initialize_search(bool reverse)
+USHORT Search::initialize_search()
 {
-  SEARCH *as = get_active_search();
-  as->string.clear();
-  as->reverse = reverse;
-  search_mode = true;
-  clear_message();
-  show_search_string();
-  show_cursor();
-  filter_string.clear();
+  return initialize_search(false);
+}
 
-  return 1;
+USHORT Search::initialize_search_reverse()
+{
+  return initialize_search(true);
 }
 
 string* Search::get_active_string() {
