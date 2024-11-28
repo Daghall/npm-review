@@ -29,7 +29,7 @@ npm info $package --json 2> /dev/null | \
 \(
   if "'$version'" != "null" then
     "CURRENT<BR>
-    '$version' (\(.time["'$version'"] | split("T") | .[0]))<BR><BR>"
+'$version' (\(.time["'$version'"] | split("T") | .[0]))<BR><BR>"
   else
     ""
   end

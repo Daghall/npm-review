@@ -14,32 +14,19 @@
 
 bool fake_http_requests = false;
 
-// "Constants"
 #define ctrl(c)       (c & 0x1f)
 
-// Global variables
-WINDOW *alternate_window = NULL;
-WINDOW *package_window = NULL;
-vector<PACKAGE> pkgs;
-vector<PACKAGE> filtered_packages;
-vector<string> alternate_rows;
-
-USHORT selected_package = 0;
-short selected_alternate_row = 0;
-
-USHORT start_alternate = 0;
-USHORT start_packages = 0;
-
-enum alternate_modes alternate_mode;
-enum main_modes main_mode = PACKAGES;
-bool show_sub_dependencies = false;
-bool refresh_packages = true;
-
-bool list_versions = false;
-string regex_parse_error;
-
-Search *searching;
-USHORT cursor_position = 1;
+VIEW view = {
+  .alternate_window = NULL,
+  .package_window = NULL,
+  .selected_package = 0,
+  .selected_alternate_row = 0,
+  .start_alternate = 0,
+  .start_packages = 0,
+  .main_mode = PACKAGES,
+  .refresh_packages = true,
+  .cursor_position = 1,
+};
 
 regex dependency_root_pattern ("^(└|├)");
 
@@ -58,13 +45,13 @@ int main(int argc, const char *argv[]) {
             break;
           case 'p':
           {
-            pkgs.push_back({
+            view.pkgs.push_back({
               .name = argv[argc + 1],
             });
             break;
           }
           case 'V':
-            list_versions = true;
+            view.list_versions = true;
             break;
         }
         break;
@@ -73,9 +60,9 @@ int main(int argc, const char *argv[]) {
         break;
     }
   }
-  searching = new Search(&alternate_window);
+  view.searching = new Search(&view.alternate_window);
   if (initial_search_string != "") {
-    searching->package.string = initial_search_string.substr(1);
+    view.searching->package.string = initial_search_string.substr(1);
   }
 
   initialize();
@@ -84,15 +71,15 @@ int main(int argc, const char *argv[]) {
   max_length.name = 0;
   max_length.version = 0;
 
-  if (pkgs.size() == 1) {
-    show_message("Fetching versions for " + pkgs.at(0).name + "...");
-    alternate_mode = VERSION;
+  if (view.pkgs.size() == 1) {
+    show_message("Fetching versions for " + view.pkgs.at(0).name + "...");
+    view.alternate_mode = VERSION;
     render_package_bar();
     render_alternate_bar();
     // TODO: Handle invalid package name
-    print_versions(pkgs.at(0), 0);
+    print_versions(view.pkgs.at(0), 0);
   } else {
-    read_packages(&max_length, &pkgs);
+    read_packages(&max_length, &view.pkgs);
   }
 
   // TODO: Sorting?
@@ -102,9 +89,9 @@ int main(int argc, const char *argv[]) {
   // TODO: Clear cache and reload from network/disk on ctrl-l
   // TODO: gx – open URL?
 
-  const USHORT package_size = (short) pkgs.size();
+  const USHORT package_size = (short) view.pkgs.size();
   const USHORT number_of_packages = max(LIST_HEIGHT, package_size);
-  package_window = newpad(number_of_packages, 1024);
+  view.package_window = newpad(number_of_packages, 1024);
   debug("Number of packages: %d\n", number_of_packages);
 
   string key_sequence = "";
@@ -112,29 +99,29 @@ int main(int argc, const char *argv[]) {
   while (true) {
     // Filtering packages
     try {
-      if (main_mode == INSTALL) {
+      if (view.main_mode == INSTALL) {
         debug("Install mode\n");
-        search_for_package(max_length, filtered_packages, searching, selected_package, fake_http_requests);
+        search_for_package(max_length, view.filtered_packages, view.searching, view.selected_package, fake_http_requests);
       } else {
-      filtered_packages.clear();
-        regex search_regex (searching->package.string);
-        regex_parse_error = "";
-        copy_if(pkgs.begin(), pkgs.end(), back_inserter(filtered_packages), [&search_regex](PACKAGE &package) {
+      view.filtered_packages.clear();
+        regex search_regex (view.searching->package.string);
+        view.regex_parse_error = "";
+        copy_if(view.pkgs.begin(), view.pkgs.end(), back_inserter(view.filtered_packages), [&search_regex](PACKAGE &package) {
           return regex_search(package.name, search_regex);
         });
       }
     } catch (const regex_error &e) {
-      regex_parse_error = e.what();
+      view.regex_parse_error = e.what();
     }
 
     // Clamp selected package
-    const USHORT number_of_filtered_packages = (USHORT) filtered_packages.size();
+    const USHORT number_of_filtered_packages = (USHORT) view.filtered_packages.size();
 
-    if (selected_package > number_of_filtered_packages - 1) {
-      selected_package = number_of_filtered_packages - 1;
+    if (view.selected_package > number_of_filtered_packages - 1) {
+      view.selected_package = number_of_filtered_packages - 1;
 
       if (number_of_filtered_packages < LIST_HEIGHT) {
-        start_packages = 0;
+        view.start_packages = 0;
       }
     }
 
@@ -144,109 +131,109 @@ int main(int argc, const char *argv[]) {
     }
 
     // Render packages
-    wclear(package_window);
+    wclear(view.package_window);
     USHORT package_index = 0;
 
-    for_each(filtered_packages.begin(), filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
-      wattron(package_window, COLOR_PAIR(COLOR_PACKAGE));
-      wattroff(package_window, A_STANDOUT | A_BOLD);
+    for_each(view.filtered_packages.begin(), view.filtered_packages.end(), [&package_index, &max_length](PACKAGE &package) {
+      wattron(view.package_window, COLOR_PAIR(COLOR_PACKAGE));
+      wattroff(view.package_window, A_STANDOUT | A_BOLD);
 
-      if (package_index++ == selected_package) {
-        wattron(package_window, A_STANDOUT);
+      if (package_index++ == view.selected_package) {
+        wattron(view.package_window, A_STANDOUT);
       }
 
       if (package.original_version != "") {
-        wattron(package_window, COLOR_PAIR(COLOR_EDITED_PACKAGE) | A_BOLD);
+        wattron(view.package_window, COLOR_PAIR(COLOR_EDITED_PACKAGE) | A_BOLD);
       }
-      const USHORT name_max_length = main_mode == INSTALL ? max_length.search : max_length.name;
-      wprintw(package_window, " %-*s  %-*s%-*s \n", name_max_length, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
+      const USHORT name_max_length = view.main_mode == INSTALL ? max_length.search : max_length.name;
+      wprintw(view.package_window, " %-*s  %-*s%-*s \n", name_max_length, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
     });
 
     // Package scrolling
-    if (selected_package <= 0) {
-      start_packages = 0;
-    } else if (selected_package >= LIST_HEIGHT + start_packages) {
-      start_packages = selected_package - LIST_HEIGHT + 1;
-    } else if (start_packages > selected_package) {
-      start_packages = selected_package;
-    } else if (selected_package < start_packages) {
-      --start_packages;
+    if (view.selected_package <= 0) {
+      view.start_packages = 0;
+    } else if (view.selected_package >= LIST_HEIGHT + view.start_packages) {
+      view.start_packages = view.selected_package - LIST_HEIGHT + 1;
+    } else if (view.start_packages > view.selected_package) {
+      view.start_packages = view.selected_package;
+    } else if (view.selected_package < view.start_packages) {
+      --view.start_packages;
     }
 
     // Alternate scrolling
-    if (selected_alternate_row <= 0) {
-      start_alternate = 0;
-    } else if (selected_alternate_row >= LIST_HEIGHT + start_alternate) {
-      start_alternate = selected_alternate_row - LIST_HEIGHT + 1;
-    } else if (start_alternate > selected_alternate_row) {
-      start_alternate = selected_alternate_row;
-    } else if (selected_alternate_row < start_alternate) {
-      --start_alternate;
+    if (view.selected_alternate_row <= 0) {
+      view.start_alternate = 0;
+    } else if (view.selected_alternate_row >= LIST_HEIGHT + view.start_alternate) {
+      view.start_alternate = view.selected_alternate_row - LIST_HEIGHT + 1;
+    } else if (view.start_alternate > view.selected_alternate_row) {
+      view.start_alternate = view.selected_alternate_row;
+    } else if (view.selected_alternate_row < view.start_alternate) {
+      --view.start_alternate;
     }
 
     // Render bottom bars
     render_package_bar();
 
-    if (alternate_window) {
+    if (view.alternate_window) {
       render_alternate_bar();
     }
 
     // Refresh package window
-    if (refresh_packages) {
-      debug("Refreshing main... %d - %d | %d\n", selected_package, LIST_HEIGHT, start_packages);
+    if (view.refresh_packages) {
+      debug("Refreshing main... %d - %d | %d\n", view.selected_package, LIST_HEIGHT, view.start_packages);
 
       // Clear the window to remove residual lines when refreshing pad smaller
       // than the full height
-      for (int i = filtered_packages.size() - start_packages; i < LIST_HEIGHT; ++i) {
+      for (int i = view.filtered_packages.size() - view.start_packages; i < LIST_HEIGHT; ++i) {
         move(i, 0);
         clrtoeol();
       }
       refresh();
 
-      if (alternate_window) {
+      if (view.alternate_window) {
         // Only refresh the part that is visible
-        prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS / 2 - 2);
+        prefresh(view.package_window, view.start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS / 2 - 2);
         render_alternate_window_border();
       } else {
-        prefresh(package_window, start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS - 1);
+        prefresh(view.package_window, view.start_packages, 0, 0, 0, LIST_HEIGHT - 1, COLS - 1);
       }
 
-      refresh_packages = false;
+      view.refresh_packages = false;
     }
 
     // Refresh alternate window
-    if (alternate_window) {
-      debug("Refreshing alternate... %d - %d | %d\n", selected_alternate_row, LIST_HEIGHT, start_alternate);
+    if (view.alternate_window) {
+      debug("Refreshing alternate... %d - %d | %d\n", view.selected_alternate_row, LIST_HEIGHT, view.start_alternate);
 
       // Clear the window to remove residual lines when refreshing pad smaller
       // than the full height
-      for (int i = alternate_rows.size() - start_alternate; i < LIST_HEIGHT; ++i) {
+      for (int i = view.alternate_rows.size() - view.start_alternate; i < LIST_HEIGHT; ++i) {
         move(i, COLS / 2);
         clrtoeol();
       }
 
       refresh();
-      prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
+      prefresh(view.alternate_window, view.start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
     }
 
     // Searching
-    if (*searching->get_active_string() != "" && !is_message_shown()) {
-      searching->show_search_string();
+    if (*view.searching->get_active_string() != "" && !is_message_shown()) {
+      view.searching->show_search_string();
     }
 
-    if (searching->is_search_mode()) {
-      move(LAST_LINE, cursor_position);
+    if (view.searching->is_search_mode()) {
+      move(LAST_LINE, view.cursor_position);
     }
 
     // List versions mode
-    if (list_versions) {
+    if (view.list_versions) {
       get_all_versions();
 
-      if (list_versions && getch() == ctrl('c')) {
-        list_versions = false;
+      if (view.list_versions && getch() == ctrl('c')) {
+        view.list_versions = false;
         show_error_message("Aborted version check");
         getch_blocking_mode(true);
-        print_alternate(&pkgs.at(selected_package));
+        print_alternate(&view.pkgs.at(view.selected_package));
         continue;
       }
     }
@@ -258,7 +245,7 @@ int main(int argc, const char *argv[]) {
       clear();
       // TODO: Warn about too small screen? 44 seems to be minimum width
       debug("Resizing... Columns: %d, Lines: %d\n", COLS, LINES);
-      refresh_packages = true;
+      view.refresh_packages = true;
       continue;
     } else if (character == ERR) {
       getch_blocking_mode(true);
@@ -270,44 +257,44 @@ int main(int argc, const char *argv[]) {
       key_sequence += character;
       debug("Key sequence: %s (%d)\n", key_sequence.c_str(), H(key_sequence.c_str()));
 
-      if (alternate_window) {
+      if (view.alternate_window) {
         switch (H(key_sequence.c_str())) {
           case H("gg"):
-            selected_alternate_row = 0;
+            view.selected_alternate_row = 0;
             print_alternate();
 
-            if (alternate_mode == VERSION_CHECK) {
-              selected_package = selected_alternate_row;
-              refresh_packages = true;
+            if (view.alternate_mode == VERSION_CHECK) {
+              view.selected_package = view.selected_alternate_row;
+              view.refresh_packages = true;
             }
             break;
           case H("gc"):
             {
-              if (alternate_mode != VERSION) {
+              if (view.alternate_mode != VERSION) {
                 debug("Key sequence ignored, inapplicable mode\n");
                 break;
               }
 
-              vector<string>::iterator current = find(alternate_rows.begin(), alternate_rows.end(), filtered_packages.at(selected_package).version);
-              selected_alternate_row = distance(current, alternate_rows.begin());
+              vector<string>::iterator current = find(view.alternate_rows.begin(), view.alternate_rows.end(), view.filtered_packages.at(view.selected_package).version);
+              view.selected_alternate_row = distance(current, view.alternate_rows.begin());
               print_alternate();
               break;
             }
           case H("gj"):
             {
-              switch (alternate_mode) {
+              switch (view.alternate_mode) {
                 case VERSION:
                 {
-                  const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
-                  vector<string>::iterator next_major = find_if(alternate_rows.begin() + selected_alternate_row, alternate_rows.end(), [&major_version](string item) {
+                  const int major_version = atoi(view.alternate_rows.at(view.selected_alternate_row).c_str());
+                  vector<string>::iterator next_major = find_if(view.alternate_rows.begin() + view.selected_alternate_row, view.alternate_rows.end(), [&major_version](string item) {
                     return atoi(item.c_str()) != major_version;
                   });
 
-                  if (next_major == alternate_rows.end()) {
-                    selected_alternate_row = alternate_rows.size() - 1;
+                  if (next_major == view.alternate_rows.end()) {
+                    view.selected_alternate_row = view.alternate_rows.size() - 1;
                     show_error_message("Hit bottom, no more versions");
                   } else {
-                    selected_alternate_row = distance(alternate_rows.begin(), next_major);
+                    view.selected_alternate_row = distance(view.alternate_rows.begin(), next_major);
                   }
 
                   print_alternate();
@@ -315,14 +302,14 @@ int main(int argc, const char *argv[]) {
                 }
                 case DEPENDENCIES:
                 {
-                  vector<string>::iterator next_root_branch = find_if(alternate_rows.begin() + selected_alternate_row + 1, alternate_rows.end(), [](string item) {
+                  vector<string>::iterator next_root_branch = find_if(view.alternate_rows.begin() + view.selected_alternate_row + 1, view.alternate_rows.end(), [](string item) {
                     return regex_search(item, dependency_root_pattern);
                   });
 
-                  if (next_root_branch == alternate_rows.end()) {
+                  if (next_root_branch == view.alternate_rows.end()) {
                     show_error_message("Hit bottom, no more root branches");
                   } else {
-                    selected_alternate_row = distance(alternate_rows.begin(), next_root_branch);
+                    view.selected_alternate_row = distance(view.alternate_rows.begin(), next_root_branch);
                   }
 
                   print_alternate();
@@ -330,16 +317,16 @@ int main(int argc, const char *argv[]) {
                 }
                 case INFO:
                 {
-                  vector<string>::iterator next_paragraph = find_if(alternate_rows.begin() + selected_alternate_row + 1, alternate_rows.end(), [](string item) {
+                  vector<string>::iterator next_paragraph = find_if(view.alternate_rows.begin() + view.selected_alternate_row + 1, view.alternate_rows.end(), [](string item) {
                     return item == "";
                   });
 
-                  if (next_paragraph == alternate_rows.end()) {
+                  if (next_paragraph == view.alternate_rows.end()) {
                     show_error_message("Hit bottom, no more paragraphs");
                   } else {
-                    short next = distance(alternate_rows.begin(), next_paragraph) + 1;
-                    if (next < alternate_rows.size()) {
-                      selected_alternate_row = next;
+                    short next = distance(view.alternate_rows.begin(), next_paragraph) + 1;
+                    if (next < view.alternate_rows.size()) {
+                      view.selected_alternate_row = next;
                     }
                   }
 
@@ -354,33 +341,33 @@ int main(int argc, const char *argv[]) {
             }
           case H("gk"):
             {
-              switch (alternate_mode) {
+              switch (view.alternate_mode) {
                 case VERSION:
                 {
-                  const int major_version = atoi(alternate_rows.at(selected_alternate_row).c_str());
-                  vector<string>::reverse_iterator previous_major = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [&major_version](string item) {
+                  const int major_version = atoi(view.alternate_rows.at(view.selected_alternate_row).c_str());
+                  vector<string>::reverse_iterator previous_major = find_if(view.alternate_rows.rbegin() + view.alternate_rows.size() - view.selected_alternate_row, view.alternate_rows.rend(), [&major_version](string item) {
                     return atoi(item.c_str()) != major_version;
                   });
 
-                  if (previous_major == alternate_rows.rend()) {
-                    selected_alternate_row = 0;
+                  if (previous_major == view.alternate_rows.rend()) {
+                    view.selected_alternate_row = 0;
                     show_error_message("Hit top, no more versions");
                   } else {
-                    selected_alternate_row = distance(previous_major, alternate_rows.rend() - 1);
+                    view.selected_alternate_row = distance(previous_major, view.alternate_rows.rend() - 1);
                   }
 
                   print_alternate();
                 }
                 case DEPENDENCIES:
                 {
-                  vector<string>::reverse_iterator previous_root_branch = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [](string item) {
+                  vector<string>::reverse_iterator previous_root_branch = find_if(view.alternate_rows.rbegin() + view.alternate_rows.size() - view.selected_alternate_row, view.alternate_rows.rend(), [](string item) {
                     return regex_search(item, dependency_root_pattern);
                   });
 
-                  if (previous_root_branch == alternate_rows.rend()) {
+                  if (previous_root_branch == view.alternate_rows.rend()) {
                     show_error_message("Hit top, no more root branches");
                   } else {
-                    selected_alternate_row = distance(previous_root_branch, alternate_rows.rend() - 1);
+                    view.selected_alternate_row = distance(previous_root_branch, view.alternate_rows.rend() - 1);
                   }
 
                   print_alternate();
@@ -388,25 +375,25 @@ int main(int argc, const char *argv[]) {
                 }
                 case INFO:
                 {
-                  vector<string>::reverse_iterator this_paragraph = find_if(alternate_rows.rbegin() + alternate_rows.size() - selected_alternate_row, alternate_rows.rend(), [](string item) {
+                  vector<string>::reverse_iterator this_paragraph = find_if(view.alternate_rows.rbegin() + view.alternate_rows.size() - view.selected_alternate_row, view.alternate_rows.rend(), [](string item) {
                     return item == "";
                   });
 
-                  if (this_paragraph == alternate_rows.rend()) {
+                  if (this_paragraph == view.alternate_rows.rend()) {
                     show_error_message("Hit top, no more paragraphs");
                     break;
                   }
 
-                  vector<string>::reverse_iterator previous_paragraph = find_if(this_paragraph + 1, alternate_rows.rend(), [](string item) {
+                  vector<string>::reverse_iterator previous_paragraph = find_if(this_paragraph + 1, view.alternate_rows.rend(), [](string item) {
                     return item == "";
                   });
 
-                  if (previous_paragraph == alternate_rows.rend()) {
-                    selected_alternate_row = 0;
+                  if (previous_paragraph == view.alternate_rows.rend()) {
+                    view.selected_alternate_row = 0;
                   } else {
-                    short previous = distance(previous_paragraph, alternate_rows.rend());
+                    short previous = distance(previous_paragraph, view.alternate_rows.rend());
                     if (previous > 0) {
-                      selected_alternate_row = previous;
+                      view.selected_alternate_row = previous;
                     }
                   }
 
@@ -420,13 +407,13 @@ int main(int argc, const char *argv[]) {
               break;
             }
           case H("zt"):
-            start_alternate = selected_alternate_row;
+            view.start_alternate = view.selected_alternate_row;
             break;
           case H("zz"):
-            start_alternate = max(0, selected_alternate_row - LIST_HEIGHT / 2);
+            view.start_alternate = max(0, view.selected_alternate_row - LIST_HEIGHT / 2);
             break;
           case H("zb"):
-            start_alternate = max(0, selected_alternate_row - LIST_HEIGHT);
+            view.start_alternate = max(0, view.selected_alternate_row - LIST_HEIGHT);
             break;
           default:
             debug("Unrecognized sequence (%d)\n", H(key_sequence.c_str()));
@@ -434,8 +421,8 @@ int main(int argc, const char *argv[]) {
       } else { // Package window
         switch (H(key_sequence.c_str())) {
           case H("gg"):
-            selected_package = 0;
-            refresh_packages = true;
+            view.selected_package = 0;
+            view.refresh_packages = true;
             break;
           case H("gj"):
             package_window_down();
@@ -444,16 +431,16 @@ int main(int argc, const char *argv[]) {
             package_window_up();
             break;
           case H("zt"):
-            start_packages = selected_package;
-            refresh_packages = true;
+            view.start_packages = view.selected_package;
+            view.refresh_packages = true;
             break;
           case H("zz"):
-            start_packages = max(0, selected_package - LIST_HEIGHT / 2);
-            refresh_packages = true;
+            view.start_packages = max(0, view.selected_package - LIST_HEIGHT / 2);
+            view.refresh_packages = true;
             break;
           case H("zb"):
-            start_packages = max(0, selected_package - LIST_HEIGHT);
-            refresh_packages = true;
+            view.start_packages = max(0, view.selected_package - LIST_HEIGHT);
+            view.refresh_packages = true;
             break;
           default:
             debug("Unrecognized sequence\n");
@@ -466,81 +453,81 @@ int main(int argc, const char *argv[]) {
     }
 
     // Handle non-sequences
-    if (searching->is_search_mode()) {
+    if (view.searching->is_search_mode()) {
       debug_key(character, "search");
-      refresh_packages = true;
+      view.refresh_packages = true;
 
       switch (character) {
         case ctrl('c'):
         case KEY_ESC:
-          searching->clear();
+          view.searching->clear();
           clear_message();
           hide_cursor();
-          if (alternate_window) {
+          if (view.alternate_window) {
             print_alternate();
           }
-          abort_install(main_mode, selected_package);
+          abort_install(view.main_mode, view.selected_package);
           break;
         case ctrl('z'):
-          searching->disable();
+          view.searching->disable();
           hide_cursor();
           raise(SIGTSTP);
         case '\n':
-          searching->finalize();
-          if (*searching->get_active_string() == "") {
+          view.searching->finalize();
+          if (*view.searching->get_active_string() == "") {
             show_error_message("Ignoring empty pattern");
-            abort_install(main_mode, selected_package);
+            abort_install(view.main_mode, view.selected_package);
           }
           hide_cursor();
           break;
         case KEY_DELETE:
         case KEY_BACKSPACE:
         case '\b': {
-          if (cursor_position > 1) {
-            --cursor_position;
-            searching->update_search_string(cursor_position);
+          if (view.cursor_position > 1) {
+            --view.cursor_position;
+            view.searching->update_search_string(view.cursor_position);
             clear_message();
-            searching->show_search_string();
-            if (alternate_window) {
+            view.searching->show_search_string();
+            if (view.alternate_window) {
               print_alternate();
             }
           } else {
-            searching->disable();
-            selected_package = 0;
+            view.searching->disable();
+            view.selected_package = 0;
             clear_message();
             hide_cursor();
 
-            abort_install(main_mode, selected_package);
+            abort_install(view.main_mode, view.selected_package);
           }
           break;
         }
         case KEY_LEFT:
-          if (cursor_position > 1) {
-            --cursor_position;
+          if (view.cursor_position > 1) {
+            --view.cursor_position;
           }
           break;
         case KEY_RIGHT:
-          if (cursor_position <= searching->get_active_string()->length()) {
-            ++cursor_position;
+          if (view.cursor_position <= view.searching->get_active_string()->length()) {
+            ++view.cursor_position;
           }
           break;
         case KEY_UP:
-          cursor_position = searching->history_prev();
+          view.cursor_position = view.searching->history_prev();
           break;
         case KEY_DOWN:
-          cursor_position = searching->history_next();
+          view.cursor_position = view.searching->history_next();
           break;
         default:
           if (is_printable(character)) {
-            searching->update_search_string(cursor_position++, character);
-            searching->show_search_string();
-            if (alternate_window) {
+            view.searching->update_search_string(view.cursor_position++, character);
+            view.searching->show_search_string();
+            if (view.alternate_window) {
               print_alternate();
             }
           }
       }
-      debug("Searching for \"%s\"\n", searching->get_active_string()->c_str());
-    } else if (alternate_window) {
+      debug("view.Searching for \"%s\"\n", view.searching->get_active_string()->c_str());
+    } else if (view.alternate_window) {
       debug_key(character, "alternate window");
       clear_message();
 
@@ -554,105 +541,105 @@ int main(int argc, const char *argv[]) {
         case 'J':
           package_window_down();
           change_alternate_window();
-          if (alternate_mode != VERSION_CHECK) {
-            start_alternate = 0;
+          if (view.alternate_mode != VERSION_CHECK) {
+            view.start_alternate = 0;
           }
           break;
         case KEY_UP:
         case 'K':
           package_window_up();
           change_alternate_window();
-          if (alternate_mode != VERSION_CHECK) {
-            start_alternate = 0;
+          if (view.alternate_mode != VERSION_CHECK) {
+            view.start_alternate = 0;
           }
           break;
         case 'j':
           alternate_window_down();
 
-          if (alternate_mode == VERSION_CHECK) {
-            selected_package = selected_alternate_row;
-            refresh_packages = true;
+          if (view.alternate_mode == VERSION_CHECK) {
+            view.selected_package = view.selected_alternate_row;
+            view.refresh_packages = true;
           }
           break;
         case 'k':
           alternate_window_up();
 
-          if (alternate_mode == VERSION_CHECK) {
-            selected_package = selected_alternate_row;
-            refresh_packages = true;
+          if (view.alternate_mode == VERSION_CHECK) {
+            view.selected_package = view.selected_alternate_row;
+            view.refresh_packages = true;
           }
           break;
         case ctrl('e'):
-          if (alternate_mode == VERSION_CHECK) continue;
+          if (view.alternate_mode == VERSION_CHECK) continue;
 
-          start_alternate = min((size_t) start_alternate + 1, alternate_rows.size() - 1);
+          view.start_alternate = min((size_t) view.start_alternate + 1, view.alternate_rows.size() - 1);
 
-            if (start_alternate > selected_alternate_row ) {
-              ++selected_alternate_row;
-              skip_empty_rows(start_alternate, 1);
+            if (view.start_alternate > view.selected_alternate_row ) {
+              ++view.selected_alternate_row;
+              skip_empty_rows(view, 1);
             }
           break;
         case ctrl('y'):
-          if (alternate_mode == VERSION_CHECK) continue;
+          if (view.alternate_mode == VERSION_CHECK) continue;
 
-          if (start_alternate > 0) {
-            --start_alternate;
+          if (view.start_alternate > 0) {
+            --view.start_alternate;
 
-            if (start_alternate + LIST_HEIGHT == selected_alternate_row) {
-              --selected_alternate_row;
-              skip_empty_rows(start_alternate, -1);
+            if (view.start_alternate + LIST_HEIGHT == view.selected_alternate_row) {
+              --view.selected_alternate_row;
+              skip_empty_rows(view, -1);
             }
           }
           break;
         case ctrl('d'):
-          start_alternate = min((size_t) start_alternate + LIST_HEIGHT / 2, alternate_rows.size() - 1);
-          if (start_alternate > selected_alternate_row) {
-            selected_alternate_row = min((size_t) start_alternate, alternate_rows.size());
+          view.start_alternate = min((size_t) view.start_alternate + LIST_HEIGHT / 2, view.alternate_rows.size() - 1);
+          if (view.start_alternate > view.selected_alternate_row) {
+            view.selected_alternate_row = min((size_t) view.start_alternate, view.alternate_rows.size());
           }
 
-          if (alternate_mode == VERSION_CHECK) {
-            start_packages = start_alternate;
-            selected_package = selected_alternate_row;
-            refresh_packages = true;
+          if (view.alternate_mode == VERSION_CHECK) {
+            view.start_packages = view.start_alternate;
+            view.selected_package = view.selected_alternate_row;
+            view.refresh_packages = true;
           }
 
           print_alternate();
           break;
         case ctrl('u'):
-          start_alternate = max(start_alternate - LIST_HEIGHT / 2, 0);
-          if (start_alternate < selected_alternate_row - LIST_HEIGHT) {
-            selected_alternate_row = start_alternate + LIST_HEIGHT - 1;
+          view.start_alternate = max(view.start_alternate - LIST_HEIGHT / 2, 0);
+          if (view.start_alternate < view.selected_alternate_row - LIST_HEIGHT) {
+            view.selected_alternate_row = view.start_alternate + LIST_HEIGHT - 1;
           }
-          if (alternate_mode == VERSION_CHECK) {
-            start_packages = start_alternate;
-            selected_package = selected_alternate_row;
-            refresh_packages = true;
+          if (view.alternate_mode == VERSION_CHECK) {
+            view.start_packages = view.start_alternate;
+            view.selected_package = view.selected_alternate_row;
+            view.refresh_packages = true;
           }
           print_alternate();
           break;
         case 'h':
-          if (alternate_mode == DEPENDENCIES) {
-            if (show_sub_dependencies) {
-              show_sub_dependencies = false;
-              get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, false, show_sub_dependencies, fake_http_requests);
+          if (view.alternate_mode == DEPENDENCIES) {
+            if (view.show_sub_dependencies) {
+              view.show_sub_dependencies = false;
+              get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, false, view.show_sub_dependencies, fake_http_requests);
             } else {
-              close_alternate_window(&alternate_window);
-              refresh_packages = true;
+              close_alternate_window(&view.alternate_window);
+              view.refresh_packages = true;
             }
           }
           break;
         case 'l':
-          if (alternate_mode == DEPENDENCIES && !show_sub_dependencies) {
-            show_sub_dependencies = true;
-              get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, false, show_sub_dependencies, fake_http_requests);
+          if (view.alternate_mode == DEPENDENCIES && !view.show_sub_dependencies) {
+            view.show_sub_dependencies = true;
+              get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, false, view.show_sub_dependencies, fake_http_requests);
           }
           break;
         case 'n':
           {
-            if (searching->alternate.reverse) {
-              searching->search_hit_prev(selected_alternate_row);
+            if (view.searching->alternate.reverse) {
+              view.searching->search_hit_prev(view.selected_alternate_row);
             } else {
-              searching->search_hit_next(selected_alternate_row);
+              view.searching->search_hit_next(view.selected_alternate_row);
             }
 
             print_alternate();
@@ -660,47 +647,47 @@ int main(int argc, const char *argv[]) {
           }
         case 'N':
           {
-            if (searching->alternate.reverse) {
-              searching->search_hit_next(selected_alternate_row);
+            if (view.searching->alternate.reverse) {
+              view.searching->search_hit_next(view.selected_alternate_row);
             } else {
-              searching->search_hit_prev(selected_alternate_row);
+              view.searching->search_hit_prev(view.selected_alternate_row);
             }
 
             print_alternate();
             break;
           }
         case 'q':
-          close_alternate_window(&alternate_window);
-          refresh_packages = true;
+          close_alternate_window(&view.alternate_window);
+          view.refresh_packages = true;
           break;
         case ctrl('c'):
         case 'Q':
           return exit();
         case 'D':
-          if (main_mode != INSTALL) {
+          if (view.main_mode != INSTALL) {
             show_error_message("Development dependency install is only available for new packages");
             break;
           }
           install_dev_dependency = true;
         case '\n':
-          switch (alternate_mode) {
+          switch (view.alternate_mode) {
             case VERSION:
-              install_package(filtered_packages.at(selected_package), alternate_rows.at(selected_alternate_row), selected_alternate_row, pkgs, install_dev_dependency);
-              refresh_packages = true;
+              install_package(view.filtered_packages.at(view.selected_package), view.alternate_rows.at(view.selected_alternate_row), view.selected_alternate_row, view.pkgs, install_dev_dependency);
+              view.refresh_packages = true;
               break;
             case DEPENDENCIES:
             case INFO:
               break;
             case VERSION_CHECK:
-              alternate_mode = VERSION;
-              print_versions(filtered_packages.at(selected_package));
+              view.alternate_mode = VERSION;
+              print_versions(view.filtered_packages.at(view.selected_package));
               break;
           }
           break;
         case 'u':
           {
-            PACKAGE package = filtered_packages.at(selected_package);
-            refresh_packages = revert_package(package, pkgs, selected_alternate_row, alternate_mode);
+            PACKAGE package = view.filtered_packages.at(view.selected_package);
+            view.refresh_packages = revert_package(package, view.pkgs, view.selected_alternate_row, view.alternate_mode);
             break;
           }
         case 'g':
@@ -709,19 +696,19 @@ int main(int argc, const char *argv[]) {
           show_key_sequence(key_sequence);
           break;
         case 'G':
-          selected_alternate_row = (int) alternate_rows.size() - 1;
+          view.selected_alternate_row = (int) view.alternate_rows.size() - 1;
           print_alternate();
 
-          if (alternate_mode == VERSION_CHECK) {
-            selected_package = selected_alternate_row;
-            refresh_packages = true;
+          if (view.alternate_mode == VERSION_CHECK) {
+            view.selected_package = view.selected_alternate_row;
+            view.refresh_packages = true;
           }
           break;
         case '?':
-          cursor_position = searching->initialize_search_reverse();
+          view.cursor_position = view.searching->initialize_search_reverse();
           break;
         case '/':
-          cursor_position = searching->initialize_search();
+          view.cursor_position = view.searching->initialize_search();
           break;
       }
     } else { // Package window
@@ -743,77 +730,77 @@ int main(int argc, const char *argv[]) {
           package_window_up();
           break;
         case 'i':
-          if (filtered_packages.size() == 0) continue;
-          alternate_mode = INFO;
-          get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests, main_mode);
+          if (view.filtered_packages.size() == 0) continue;
+          view.alternate_mode = INFO;
+          get_info(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, fake_http_requests, view.main_mode);
           break;
         case 'I':
-          cursor_position = searching->initialize_search();
-          main_mode = INSTALL;
-          filtered_packages.clear();
-          refresh_packages = true;
+          view.cursor_position = view.searching->initialize_search();
+          view.main_mode = INSTALL;
+          view.filtered_packages.clear();
+          view.refresh_packages = true;
           break;
         case 'l':
-          if (filtered_packages.size() == 0) continue;
-          alternate_mode = DEPENDENCIES;
-          get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, true, show_sub_dependencies, fake_http_requests);
+          if (view.filtered_packages.size() == 0) continue;
+          view.alternate_mode = DEPENDENCIES;
+          get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, true, view.show_sub_dependencies, fake_http_requests);
           break;
         case '\n':
-          if (filtered_packages.size() == 0) continue;
-          alternate_mode = VERSION;
-          print_versions(filtered_packages.at(selected_package));
+          if (view.filtered_packages.size() == 0) continue;
+          view.alternate_mode = VERSION;
+          print_versions(view.filtered_packages.at(view.selected_package));
           break;
         case 'D':
         {
-          if (main_mode == INSTALL) {
+          if (view.main_mode == INSTALL) {
             // TODO: Install @latest instead - prompt?
             show_error_message("Only installed packages can be uninstalled");
             break;
           }
-          if (filtered_packages.size() == 0) continue;
-          PACKAGE package = filtered_packages.at(selected_package);
-          uninstall_package(package, pkgs);
-          refresh_packages = true;
+          if (view.filtered_packages.size() == 0) continue;
+          PACKAGE package = view.filtered_packages.at(view.selected_package);
+          uninstall_package(package, view.pkgs);
+          view.refresh_packages = true;
           break;
         }
         case ctrl('e'):
-          start_packages = min(filtered_packages.size() - 1, (size_t) ++start_packages);
+          view.start_packages = min(view.filtered_packages.size() - 1, (size_t) ++view.start_packages);
 
-          if (start_packages > selected_package) {
-            selected_package = start_packages;
+          if (view.start_packages > view.selected_package) {
+            view.selected_package = view.start_packages;
           }
-          refresh_packages = true;
+          view.refresh_packages = true;
           break;
         case ctrl('y'):
-          start_packages = max(0, start_packages - 1);
+          view.start_packages = max(0, view.start_packages - 1);
 
-          if (start_packages == selected_package - LIST_HEIGHT) {
-            selected_package = start_packages + LIST_HEIGHT - 1;
+          if (view.start_packages == view.selected_package - LIST_HEIGHT) {
+            view.selected_package = view.start_packages + LIST_HEIGHT - 1;
           }
 
-          refresh_packages = true;
+          view.refresh_packages = true;
           break;
         case ctrl('d'):
-          start_packages = min((size_t) start_packages + LIST_HEIGHT / 2, pkgs.size() - 1);
+          view.start_packages = min((size_t) view.start_packages + LIST_HEIGHT / 2, view.pkgs.size() - 1);
 
-          if (start_packages > selected_package) {
-            selected_package = min((size_t) start_packages, pkgs.size());
+          if (view.start_packages > view.selected_package) {
+            view.selected_package = min((size_t) view.start_packages, view.pkgs.size());
           }
-          refresh_packages = true;
+          view.refresh_packages = true;
           break;
         case ctrl('u'):
-          start_packages = max(start_packages - LIST_HEIGHT / 2, 0);
+          view.start_packages = max(view.start_packages - LIST_HEIGHT / 2, 0);
 
-          if (start_packages < selected_package - LIST_HEIGHT) {
-            selected_package = start_packages + LIST_HEIGHT - 1;
+          if (view.start_packages < view.selected_package - LIST_HEIGHT) {
+            view.selected_package = view.start_packages + LIST_HEIGHT - 1;
           }
-          refresh_packages = true;
+          view.refresh_packages = true;
           break;
         case 'p':
-          if (main_mode == INSTALL) {
-            main_mode = PACKAGES;
-            searching->clear();
-            refresh_packages = true;
+          if (view.main_mode == INSTALL) {
+            view.main_mode = PACKAGES;
+            view.searching->clear();
+            view.refresh_packages = true;
           }
           break;
         case ctrl('c'):
@@ -826,24 +813,24 @@ int main(int argc, const char *argv[]) {
           show_key_sequence(key_sequence);
           break;
         case 'G':
-          selected_package = number_of_packages - 1;
-          refresh_packages = true;
+          view.selected_package = number_of_packages - 1;
+          view.refresh_packages = true;
           break;
         case '?':
-          cursor_position = searching->initialize_search_reverse();
+          view.cursor_position = view.searching->initialize_search_reverse();
           break;
         case '/':
-          cursor_position = searching->initialize_search();
+          view.cursor_position = view.searching->initialize_search();
           break;
         case 'V':
-          selected_package = 0;
-          selected_alternate_row = 0;
-          refresh_packages = true;
-          list_versions = true;
+          view.selected_package = 0;
+          view.selected_alternate_row = 0;
+          view.refresh_packages = true;
+          view.list_versions = true;
           break;
         case 'u':
-          PACKAGE package = filtered_packages.at(selected_package);
-          refresh_packages = revert_package(package, pkgs, selected_alternate_row, alternate_mode);
+          PACKAGE package = view.filtered_packages.at(view.selected_package);
+          view.refresh_packages = revert_package(package, view.pkgs, view.selected_alternate_row, view.alternate_mode);
           break;
       }
     }
@@ -852,13 +839,13 @@ int main(int argc, const char *argv[]) {
 
 WINDOW* get_alternate_window()
 {
-  return alternate_window;
+  return view.alternate_window;
 }
 
 void print_versions(PACKAGE package, int alternate_row)
 {
-  selected_alternate_row = alternate_row;
-  alternate_rows = get_versions(package, fake_http_requests, VERSION);
+  view.selected_alternate_row = alternate_row;
+  view.alternate_rows = get_versions(package, fake_http_requests, VERSION);
   print_alternate(&package);
 }
 
@@ -893,23 +880,23 @@ void get_all_versions()
 
   getch_blocking_mode(false);
 
-  if (selected_package == 0) {
+  if (view.selected_package == 0) {
     init_alternate_window(false);
-    alternate_rows.clear();
-    alternate_mode = VERSION_CHECK;
-    selected_alternate_row = 0;
+    view.alternate_rows.clear();
+    view.alternate_mode = VERSION_CHECK;
+    view.selected_alternate_row = 0;
 
-    for (int i = filtered_packages.size(); i > 0; --i) {
-      alternate_rows.push_back("Pending...");
+    for (int i = view.filtered_packages.size(); i > 0; --i) {
+      view.alternate_rows.push_back("Pending...");
     }
   }
 
-  PACKAGE package = filtered_packages.at(selected_package);
+  PACKAGE package = view.filtered_packages.at(view.selected_package);
   string message = "Checking versions for \"" + package.name + "\"";
   show_message(message.c_str());
   print_alternate(&package);
-  prefresh(alternate_window, start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
-  refresh_packages = true;
+  prefresh(view.alternate_window, view.start_alternate, 0, 0, COLS / 2, LIST_HEIGHT - 1 , COLS - 1);
+  view.refresh_packages = true;
 
   vector<string> versions = get_versions(package, fake_http_requests, VERSION_CHECK);
   string current_major = get_major(package.version);
@@ -938,69 +925,69 @@ void get_all_versions()
   char formatted_string[128];
   snprintf(formatted_string, 128, " %6s %-14s ", version_string.c_str(), major_string.c_str());
 
-  alternate_rows.at(selected_package) = formatted_string;
+  view.alternate_rows.at(view.selected_package) = formatted_string;
 
-  if (++selected_package >= filtered_packages.size()) {
-    list_versions = false;
+  if (++view.selected_package >= view.filtered_packages.size()) {
+    view.list_versions = false;
     clear_message();
-    print_alternate(&pkgs.at(selected_package - 1));
+    print_alternate(&view.pkgs.at(view.selected_package - 1));
   } else {
-    selected_alternate_row = selected_package;
+    view.selected_alternate_row = view.selected_package;
   }
 }
 
 // TODO: Color unmet deps?
 void print_alternate(PACKAGE *package)
 {
-  if (alternate_window) {
-    wclear(alternate_window);
-    delwin(alternate_window);
+  if (view.alternate_window) {
+    wclear(view.alternate_window);
+    delwin(view.alternate_window);
   }
 
   if (package == nullptr) {
-    package = &filtered_packages.at(selected_package);
+    package = &view.filtered_packages.at(view.selected_package);
   }
 
-  if (selected_alternate_row < 0 && main_mode == INSTALL) {
-    selected_alternate_row = 0;
+  if (view.selected_alternate_row < 0 && view.main_mode == INSTALL) {
+    view.selected_alternate_row = 0;
   }
 
   string package_version = package->version;
-  const int alternate_length = max(LIST_HEIGHT, (USHORT) alternate_rows.size());
+  const int alternate_length = max(LIST_HEIGHT, (USHORT) view.alternate_rows.size());
   size_t index = 0;
-  alternate_window = newpad(alternate_length, 1024);
+  view.alternate_window = newpad(alternate_length, 1024);
 
-  debug("Number of alternate items/rows: %zu/%d\n", alternate_rows.size(), alternate_length);
+  debug("Number of alternate items/rows: %zu/%d\n", view.alternate_rows.size(), alternate_length);
 
   regex search_regex;
   try {
-    search_regex = searching->alternate.string;
+    search_regex = view.searching->alternate.string;
   } catch (const regex_error &e) {
     debug("Regex error: %s\n", e.what());
   }
 
   USHORT color = COLOR_DEFAULT;
-  searching->search_hits.clear();
+  view.searching->search_hits.clear();
 
-  for_each(alternate_rows.begin(), alternate_rows.end(), [package_version, &index, &search_regex, &color, &package](const string &row) {
-    if (row == package_version && alternate_mode == VERSION) {
-      wattron(alternate_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
+  for_each(view.alternate_rows.begin(), view.alternate_rows.end(), [package_version, &index, &search_regex, &color, &package](const string &row) {
+    if (row == package_version && view.alternate_mode == VERSION) {
+      wattron(view.alternate_window, COLOR_PAIR(COLOR_CURRENT_VERSION));
       color = COLOR_CURRENT_VERSION;
-      if (selected_alternate_row < 0) {
-        selected_alternate_row = index;
+      if (view.selected_alternate_row < 0) {
+        view.selected_alternate_row = index;
       }
     }
 
-    if (selected_alternate_row == index) {
-      wattron(alternate_window, A_STANDOUT);
+    if (view.selected_alternate_row == index) {
+      wattron(view.alternate_window, A_STANDOUT);
     }
 
-    if (searching->alternate.string != "") {
+    if (view.searching->alternate.string != "") {
       smatch matches;
       string::const_iterator start = row.cbegin();
       size_t prev = 0;
 
-      wprintw(alternate_window, " ");
+      wprintw(view.alternate_window, " ");
 
       while (regex_search(start, row.end(), matches, search_regex, regex_constants::match_any)) {
         const string match = matches[0];
@@ -1009,18 +996,18 @@ void print_alternate(PACKAGE *package)
 
         if (match.length() == 0) break;
 
-        searching->search_hits.push_back(index);
+        view.searching->search_hits.push_back(index);
 
-        wprintw(alternate_window, "%s", rest.substr(0, match_position).c_str());
+        wprintw(view.alternate_window, "%s", rest.substr(0, match_position).c_str());
 
-        wattroff(alternate_window, A_STANDOUT); // Color fix
-        wattron(alternate_window, COLOR_PAIR(COLOR_SEARCH));
-        wprintw(alternate_window, "%s", match.c_str());
-        wattroff(alternate_window, COLOR_PAIR(COLOR_SEARCH));
-        if (selected_alternate_row == index) wattron(alternate_window, A_STANDOUT); // Color fix
+        wattroff(view.alternate_window, A_STANDOUT); // Color fix
+        wattron(view.alternate_window, COLOR_PAIR(COLOR_SEARCH));
+        wprintw(view.alternate_window, "%s", match.c_str());
+        wattroff(view.alternate_window, COLOR_PAIR(COLOR_SEARCH));
+        if (view.selected_alternate_row == index) wattron(view.alternate_window, A_STANDOUT); // Color fix
 
         if (color != COLOR_DEFAULT) {
-          wattron(alternate_window, COLOR_PAIR(color));
+          wattron(view.alternate_window, COLOR_PAIR(color));
         }
 
         prev = match_position + match.length();
@@ -1028,41 +1015,41 @@ void print_alternate(PACKAGE *package)
       }
 
       const string rest (start - prev, row.cend());
-      wprintw(alternate_window, "%-*s\n", 512 - prev, rest.substr(prev).c_str());
+      wprintw(view.alternate_window, "%-*s\n", 512 - prev, rest.substr(prev).c_str());
     } else {
       string str = row;
 
-      if (alternate_mode == VERSION && str == package->original_version) {
+      if (view.alternate_mode == VERSION && str == package->original_version) {
         str += " [committed]";
       }
-      wprintw(alternate_window," %-*s \n", 512, str.c_str());
+      wprintw(view.alternate_window," %-*s \n", 512, str.c_str());
     }
 
-    if (row == package_version && alternate_mode == VERSION) {
-      wattroff(alternate_window, A_STANDOUT);
-      wattron(alternate_window, COLOR_PAIR(COLOR_ERROR));
+    if (row == package_version && view.alternate_mode == VERSION) {
+      wattroff(view.alternate_window, A_STANDOUT);
+      wattron(view.alternate_window, COLOR_PAIR(COLOR_ERROR));
       color = COLOR_ERROR;
     }
-    wattroff(alternate_window, A_STANDOUT);
+    wattroff(view.alternate_window, A_STANDOUT);
     ++index;
   });
 }
 
 void change_alternate_window()
 {
-  debug("Changing alternate window (%d)\n", alternate_mode);
-  switch (alternate_mode) {
+  debug("Changing alternate window (%d)\n", view.alternate_mode);
+  switch (view.alternate_mode) {
   case VERSION:
-    print_versions(filtered_packages.at(selected_package));
+    print_versions(view.filtered_packages.at(view.selected_package));
     break;
   case DEPENDENCIES:
-    get_dependencies(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, true, show_sub_dependencies, fake_http_requests);
+    get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, true, view.show_sub_dependencies, fake_http_requests);
     break;
   case INFO:
-    get_info(filtered_packages.at(selected_package), alternate_rows, selected_alternate_row, fake_http_requests, main_mode);
+    get_info(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, fake_http_requests, view.main_mode);
     break;
   case VERSION_CHECK:
-    selected_alternate_row = selected_package;
+    view.selected_alternate_row = view.selected_package;
     print_alternate();
     break;
   }
@@ -1070,38 +1057,38 @@ void change_alternate_window()
 
 void render_package_bar()
 {
-  const USHORT package_bar_length = (alternate_window ? COLS / 2 - 1: COLS) - 13;
-  const string search_string = searching->package.string;
+  const USHORT package_bar_length = (view.alternate_window ? COLS / 2 - 1: COLS) - 13;
+  const string search_string = view.searching->package.string;
   bool filtered = false;
   string package_bar_info;
 
-  if (main_mode != INSTALL) {
-    main_mode = filtered ? FILTERED : PACKAGES;
+  if (view.main_mode != INSTALL) {
+    view.main_mode = filtered ? FILTERED : PACKAGES;
     filtered = search_string.length() > 0;
   }
 
-  if (regex_parse_error.length() > 0) {
-    package_bar_info = regex_parse_error;
-  } else if (filtered_packages.size() == 0) {
+  if (view.regex_parse_error.length() > 0) {
+    package_bar_info = view.regex_parse_error;
+  } else if (view.filtered_packages.size() == 0) {
     package_bar_info = "No matches";
   } else {
-    const int package_number_width = number_width(pkgs.size());
+    const int package_number_width = number_width(view.pkgs.size());
     char x_of_y[32];
-    snprintf(x_of_y, 32, "%d/%-*zu", selected_package + 1, package_number_width, filtered_packages.size());
+    snprintf(x_of_y, 32, "%d/%-*zu", view.selected_package + 1, package_number_width, view.filtered_packages.size());
 
     if (filtered) {
       const size_t len = strlen(x_of_y);
-      snprintf(x_of_y + len, 32, " (%zu)", pkgs.size());
+      snprintf(x_of_y + len, 32, " (%zu)", view.pkgs.size());
     }
 
     package_bar_info = x_of_y;
   }
 
   attron(COLOR_PAIR(COLOR_INFO_BAR));
-  if (alternate_mode != DEPENDENCIES) {
+  if (view.alternate_mode != DEPENDENCIES) {
     mvprintw(LIST_HEIGHT, 0, "%*s", COLS, ""); // Clear and set background on the entire line
   }
-  mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", main_mode_to_string(main_mode), package_bar_length, package_bar_info.c_str());
+  mvprintw(LIST_HEIGHT, 0, " [%s] %*s ", main_mode_to_string(view.main_mode), package_bar_length, package_bar_info.c_str());
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
@@ -1109,18 +1096,18 @@ void render_alternate_bar()
 {
   attron(COLOR_PAIR(COLOR_INFO_BAR));
   char x_of_y[32];
-  snprintf(x_of_y, 32, "%d/%zu", selected_alternate_row + 1, alternate_rows.size());
-  const char* alternate_mode_string = alternate_mode_to_string(alternate_mode);
+  snprintf(x_of_y, 32, "%d/%zu", view.selected_alternate_row + 1, view.alternate_rows.size());
+  const char* alternate_mode_string = alternate_mode_to_string(view.alternate_mode);
   const USHORT offset = 5 - COLS % 2;
   mvprintw(LIST_HEIGHT, COLS / 2 - 1, "│ [%s] %*s ", alternate_mode_string, COLS / 2 - (offset + strlen(alternate_mode_string)), x_of_y);
   attroff(COLOR_PAIR(COLOR_INFO_BAR));
 }
 
-void skip_empty_rows(USHORT &start_alternate, short adjustment)
+void skip_empty_rows(VIEW &view, short adjustment)
 {
-  if (alternate_rows.at(selected_alternate_row) == "") {
-    start_alternate += adjustment;
-    selected_alternate_row += adjustment;
+  if (view.alternate_rows.at(view.selected_alternate_row) == "") {
+    view.start_alternate += adjustment;
+    view.selected_alternate_row += adjustment;
   }
 
   print_alternate();
@@ -1128,13 +1115,13 @@ void skip_empty_rows(USHORT &start_alternate, short adjustment)
 
 string find_dependency_root()
 {
-  if (alternate_rows.size() == 0) return "";
+  if (view.alternate_rows.size() == 0) return "";
 
-  while (selected_alternate_row > 0 && !regex_search(alternate_rows.at(selected_alternate_row), dependency_root_pattern)) {
-    --selected_alternate_row;
+  while (view.selected_alternate_row > 0 && !regex_search(view.alternate_rows.at(view.selected_alternate_row), dependency_root_pattern)) {
+    --view.selected_alternate_row;
   }
 
-  string match = alternate_rows.at(selected_alternate_row);
+  string match = view.alternate_rows.at(view.selected_alternate_row);
   int end = match.find("  ");
 
   return match.substr(0, end);
@@ -1144,40 +1131,40 @@ void select_dependency_node(string &selected)
 {
   if (selected == "") return;
 
-  int size = alternate_rows.size();
+  int size = view.alternate_rows.size();
   int selected_length = selected.length();
   string row;
 
   while (true) {
-    row = alternate_rows.at(selected_alternate_row);
+    row = view.alternate_rows.at(view.selected_alternate_row);
     if (row.compare(0, selected_length, selected) == 0) break;
-    if (selected_alternate_row >= size) break;
+    if (view.selected_alternate_row >= size) break;
 
-    ++selected_alternate_row;
+    ++view.selected_alternate_row;
   }
 }
 
 void package_window_up()
 {
-  if (filtered_packages.size() > 0) {
-    selected_package = (selected_package - 1 + filtered_packages.size()) % filtered_packages.size();
-    refresh_packages = true;
+  if (view.filtered_packages.size() > 0) {
+    view.selected_package = (view.selected_package - 1 + view.filtered_packages.size()) % view.filtered_packages.size();
+    view.refresh_packages = true;
   }
 }
 
 void package_window_down()
 {
-  if (filtered_packages.size() > 0) {
-    selected_package = (selected_package + 1) % filtered_packages.size();
-    refresh_packages = true;
+  if (view.filtered_packages.size() > 0) {
+    view.selected_package = (view.selected_package + 1) % view.filtered_packages.size();
+    view.refresh_packages = true;
   }
 }
 
 void alternate_window_up()
 {
-  selected_alternate_row = max(selected_alternate_row - 1, 0);
-  if (alternate_rows.at(selected_alternate_row) == "") {
-    selected_alternate_row = max(selected_alternate_row - 1, 0);
+  view.selected_alternate_row = max(view.selected_alternate_row - 1, 0);
+  if (view.alternate_rows.at(view.selected_alternate_row) == "") {
+    view.selected_alternate_row = max(view.selected_alternate_row - 1, 0);
   }
 
   print_alternate();
@@ -1185,9 +1172,9 @@ void alternate_window_up()
 
 void alternate_window_down()
 {
-  selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
-  if (alternate_rows.at(selected_alternate_row) == "") {
-    selected_alternate_row = min(selected_alternate_row + 1, (int) alternate_rows.size() - 1);
+  view.selected_alternate_row = min(view.selected_alternate_row + 1, (int) view.alternate_rows.size() - 1);
+  if (view.alternate_rows.at(view.selected_alternate_row) == "") {
+    view.selected_alternate_row = min(view.selected_alternate_row + 1, (int) view.alternate_rows.size() - 1);
   }
 
   print_alternate();
@@ -1196,8 +1183,8 @@ void alternate_window_down()
 int exit()
 {
   terminate_logging();
-  if (alternate_window) {
-    delwin(alternate_window);
+  if (view.alternate_window) {
+    delwin(view.alternate_window);
   }
   return endwin();
 }

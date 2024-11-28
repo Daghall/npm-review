@@ -23,7 +23,7 @@ void get_all_versions();
 void change_alternate_window();
 void render_package_bar();
 void render_alternate_bar();
-void skip_empty_rows(USHORT &start_alternate, short adjustment);
+void skip_empty_rows(VIEW &view, short adjustment);
 string find_dependency_root();
 void select_dependency_node(string &selected);
 void init_alternate_window(bool show_loading_message = true);

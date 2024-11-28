@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <curses.h>
 
 using namespace std;
 
@@ -52,5 +53,27 @@ enum main_modes {
   PACKAGES,
   FILTERED,
 };
+
+class Search; // Forward declaration, to avoid circular dependencies
+
+typedef struct {
+  WINDOW *alternate_window;
+  WINDOW *package_window;
+  vector<PACKAGE> pkgs;
+  vector<PACKAGE> filtered_packages;
+  vector<string> alternate_rows;
+  USHORT selected_package;
+  short selected_alternate_row;
+  USHORT start_alternate;
+  USHORT start_packages;
+  enum alternate_modes alternate_mode;
+  enum main_modes main_mode;
+  bool show_sub_dependencies;
+  bool refresh_packages;
+  bool list_versions;
+  string regex_parse_error;
+  Search *searching;
+  USHORT cursor_position;
+} VIEW;
 
 #endif // _TYPES_H
