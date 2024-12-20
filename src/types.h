@@ -34,13 +34,6 @@ typedef struct {
   USHORT version;
 } MAX_LENGTH;
 
-typedef struct {
-  bool init;
-  bool fake_http_requests;
-  bool show_sub_dependencies;
-  vector<string> &alternate_rows;
-} DEP_OPTS;
-
 enum alternate_modes {
   VERSION,
   DEPENDENCIES,

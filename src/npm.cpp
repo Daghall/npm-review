@@ -28,16 +28,16 @@ const char *NPM_SEARCH_STRING = {
 
 CACHES *caches = get_caches();
 
-void read_packages(MAX_LENGTH *max_length, vector<PACKAGE> *pkgs)
+void read_packages(MAX_LENGTH *max_length, VIEW &view)
 {
   debug("Reading packages\n");
   string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r 2> /dev/null < package.json; done";
   vector<string> packages = shell_command(command);
-  pkgs->clear();
+  view.pkgs.clear();
 
   version_type diff_versions = get_diff_versions();
 
-  for_each(packages.begin(), packages.end(), [&max_length, &pkgs, &diff_versions](string &package) {
+  for_each(packages.begin(), packages.end(), [&max_length, &view, &diff_versions](string &package) {
     const vector<string> strings = split_string(package);
     string name = strings.at(0);
     string version = strings.at(1);
@@ -45,8 +45,9 @@ void read_packages(MAX_LENGTH *max_length, vector<PACKAGE> *pkgs)
 
     const version_type::iterator version_item = diff_versions.find(name);
     const string original_version = version_item != diff_versions.end() ? version_item->second : "";
+    debug("Package: %s %s \t\t\t%s\n", name.c_str(), version.c_str(), original_version.c_str());
 
-    pkgs->push_back({
+    view.pkgs.push_back({
       .name = name,
       .version = version,
       .original_version = original_version,
@@ -106,8 +107,9 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_
   }
 }
 
-void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &selected_alternate_row, bool init, bool show_sub_dependencies, bool fake_http_requests)
+void get_dependencies(VIEW &view, bool init, bool fake_http_requests)
 {
+  PACKAGE package = view.filtered_packages.at(view.selected_package);
   string package_name = escape_slashes(package.name);
   string selected;
 
@@ -117,31 +119,31 @@ void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &se
 
   if (fake_http_requests) { // {{{1
     render_alternate_window_border();
-    alternate_rows.clear();
-    if (!show_sub_dependencies) {
-      alternate_rows.push_back("┬ express-handlebars    5.3.5");
-      alternate_rows.push_back("├─┬ glob                7.2.0");
-      alternate_rows.push_back("├── graceful-fs         4.2.10");
-      alternate_rows.push_back("└─┬ handlebars          4.7.7");
+    view.alternate_rows.clear();
+    if (!view.show_sub_dependencies) {
+      view.alternate_rows.push_back("┬ express-handlebars    5.3.5");
+      view.alternate_rows.push_back("├─┬ glob                7.2.0");
+      view.alternate_rows.push_back("├── graceful-fs         4.2.10");
+      view.alternate_rows.push_back("└─┬ handlebars          4.7.7");
     } else {
-      alternate_rows.push_back("┬ express-handlebars    5.3.5");
-      alternate_rows.push_back("├─┬ glob                7.2.0");
-      alternate_rows.push_back("│ ├── fs.realpath       1.0.0");
-      alternate_rows.push_back("│ ├─┬ inflight          1.0.6");
-      alternate_rows.push_back("│ │ ├── once            1.4.0");
-      alternate_rows.push_back("│ │ └── wrappy          1.0.2");
-      alternate_rows.push_back("│ ├── inherits          2.0.4");
-      alternate_rows.push_back("│ ├── minimatch         3.1.2");
-      alternate_rows.push_back("│ ├─┬ once              1.4.0");
-      alternate_rows.push_back("│ │ └── wrappy          1.0.2");
-      alternate_rows.push_back("│ └── path-is-absolute  1.0.1");
-      alternate_rows.push_back("├── graceful-fs         4.2.10");
-      alternate_rows.push_back("└─┬ handlebars          4.7.7");
-      alternate_rows.push_back("  ├── minimist          1.2.6");
-      alternate_rows.push_back("  ├── neo-async         2.6.2");
-      alternate_rows.push_back("  ├── source-map        0.6.1");
-      alternate_rows.push_back("  ├── uglify-js         3.15.3");
-      alternate_rows.push_back("  └── wordwrap          1.0.0");
+      view.alternate_rows.push_back("┬ express-handlebars    5.3.5");
+      view.alternate_rows.push_back("├─┬ glob                7.2.0");
+      view.alternate_rows.push_back("│ ├── fs.realpath       1.0.0");
+      view.alternate_rows.push_back("│ ├─┬ inflight          1.0.6");
+      view.alternate_rows.push_back("│ │ ├── once            1.4.0");
+      view.alternate_rows.push_back("│ │ └── wrappy          1.0.2");
+      view.alternate_rows.push_back("│ ├── inherits          2.0.4");
+      view.alternate_rows.push_back("│ ├── minimatch         3.1.2");
+      view.alternate_rows.push_back("│ ├─┬ once              1.4.0");
+      view.alternate_rows.push_back("│ │ └── wrappy          1.0.2");
+      view.alternate_rows.push_back("│ └── path-is-absolute  1.0.1");
+      view.alternate_rows.push_back("├── graceful-fs         4.2.10");
+      view.alternate_rows.push_back("└─┬ handlebars          4.7.7");
+      view.alternate_rows.push_back("  ├── minimist          1.2.6");
+      view.alternate_rows.push_back("  ├── neo-async         2.6.2");
+      view.alternate_rows.push_back("  ├── source-map        0.6.1");
+      view.alternate_rows.push_back("  ├── uglify-js         3.15.3");
+      view.alternate_rows.push_back("  └── wordwrap          1.0.0");
     }
   } else { // }}}
     char command[COMMAND_SIZE];
@@ -149,64 +151,71 @@ void get_dependencies(PACKAGE package, vector<string> &alternate_rows, short &se
     init_alternate_window();
     vector<string> dependency_data = get_from_cache(package_name, command, DEPENDENCIES);
 
-    if (show_sub_dependencies) {
-      alternate_rows = dependency_data;
+    if (view.show_sub_dependencies) {
+      view.alternate_rows = dependency_data;
     } else {
       regex sub_dependency_regex ("^(│| )");
-      alternate_rows.clear();
-      copy_if(dependency_data.begin(), dependency_data.end(), back_inserter(alternate_rows), [&sub_dependency_regex](string dependency) {
+      view.alternate_rows.clear();
+      copy_if(dependency_data.begin(), dependency_data.end(), back_inserter(view.alternate_rows), [&sub_dependency_regex](string dependency) {
         return !regex_search(dependency, sub_dependency_regex);
       });
     }
   }
 
-  selected_alternate_row = 0;
+  view.selected_alternate_row = 0;
   select_dependency_node(selected);
   print_alternate(&package);
 }
 
-void get_info(PACKAGE package, vector<string> &alternate_rows, short &selected_alternate_row, bool fake_http_requests, main_modes main_mode)
+void get_info(PACKAGE package, VIEW &view, bool fake_http_requests)
 {
   string package_name = escape_slashes(package.name);
   const char* package_version = package.version.c_str();
 
   if (fake_http_requests) { // {{{1
     render_alternate_window_border();
-    alternate_rows.clear();
-    alternate_rows.push_back("express-handlebars | BSD-3-Clause");
-    alternate_rows.push_back("A Handlebars view engine for Express which doesn't suck.");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("CURRENT");
-    alternate_rows.push_back("5.3.5 (2021-11-13)");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("LATEST");
-    alternate_rows.push_back("7.0.7 (2023-04-15)");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("DEPENDENCIES");
-    alternate_rows.push_back("– glob");
-    alternate_rows.push_back("– graceful-fs");
-    alternate_rows.push_back("– handlebars");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("HOMEPAGE");
-    alternate_rows.push_back("https://github.com/express-handlebars/express-handlebars");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("AUTHOR");
-    alternate_rows.push_back("Eric Ferraiuolo <eferraiuolo@gmail.com> (http://ericf.me/)");
-    alternate_rows.push_back("");
-    alternate_rows.push_back("KEYWORDS");
-    alternate_rows.push_back("express, express3, handlebars, view, layout, partials, templates");
+    view.alternate_rows.clear();
+    view.alternate_rows.push_back("express-handlebars | BSD-3-Clause");
+    view.alternate_rows.push_back("A Handlebars view engine for Express which doesn't suck.");
+    view.alternate_rows.push_back("");
+    view.alternate_rows.push_back("CURRENT");
+    view.alternate_rows.push_back("5.3.5 (2021-11-13)");
+    view.alternate_rows.push_back("");
+    view.alternate_rows.push_back("LATEST");
+    view.alternate_rows.push_back("7.0.7 (2023-04-15)");
+    view.alternate_rows.push_back("");
+    view.alternate_rows.push_back("DEPENDENCIES");
+    view.alternate_rows.push_back("– glob");
+    view.alternate_rows.push_back("– graceful-fs");
+    view.alternate_rows.push_back("– handlebars");
+    view.alternate_rows.push_back("");
+    view.alternate_rows.push_back("HOMEPAGE");
+    view.alternate_rows.push_back("https://github.com/express-handlebars/express-handlebars");
+    view.alternate_rows.push_back("");
+    view.alternate_rows.push_back("AUTHOR");
+    view.alternate_rows.push_back("Eric Ferraiuolo <eferraiuolo@gmail.com> (http://ericf.me/)");
+    view.alternate_rows.push_back("");
+    view.alternate_rows.push_back("KEYWORDS");
+    view.alternate_rows.push_back("express, express3, handlebars, view, layout, partials, templates");
   } else { // }}}
     char command[COMMAND_SIZE];
-    const char* version = main_mode == INSTALL ? "null" : package_version;
+    const char* version = view.main_mode == INSTALL ? "null" : package_version;
     snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), version, version, version);
     init_alternate_window();
-    alternate_rows = get_from_cache(package_name, command, INFO);
+    view.alternate_rows = get_from_cache(package_name, command, INFO);
   }
-  selected_alternate_row = 0;
+  view.selected_alternate_row = 0;
   print_alternate(&package);
 }
 
-void install_package(PACKAGE &package, const string new_version, short &selected_alternate_row, vector<PACKAGE> &pkgs, bool install_dev_dependency)
+void install_package(VIEW &view, bool install_dev_dependency)
+{
+  PACKAGE package = view.filtered_packages.at(view.selected_package);
+  string new_version = view.alternate_rows.at(view.selected_alternate_row);
+  install_package(package, new_version, view, install_dev_dependency);
+}
+
+void install_package(PACKAGE &package, const string new_version, VIEW &view, bool install_dev_dependency)
 {
   show_message("Installing...");
 
@@ -227,11 +236,11 @@ void install_package(PACKAGE &package, const string new_version, short &selected
     debug("Installed %s@%s %s\n", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "(DEV)" : "");
     show_message("Installed " + package.name + "@" + new_version + (install_dev_dependency ? " (DEV)" : ""));
     package.version = new_version;
-    read_packages(nullptr, &pkgs);
-    selected_alternate_row = -1;
+    read_packages(nullptr, view);
+    view.selected_alternate_row = -1;
 
     if (get_alternate_window()) {
-      PACKAGE updated_package = find_package(pkgs, package.name);
+      PACKAGE updated_package = find_package(view.pkgs, package.name);
       print_alternate(&updated_package);
     }
   } else {
@@ -240,24 +249,26 @@ void install_package(PACKAGE &package, const string new_version, short &selected
   }
 }
 
-bool revert_package(PACKAGE &package, vector<PACKAGE> &pkgs, short &selected_alternate_row, alternate_modes alternate_mode)
+bool revert_package(PACKAGE &package, VIEW &view)
 {
-  if (get_alternate_window() && alternate_mode != VERSION) return false;
+  if (view.alternate_window && view.alternate_mode != VERSION) return false;
   if (package.original_version == "") {
     show_message("Already at oldest change");
     return false;
   }
 
   if (confirm("Revert " + package.name + " to " + package.original_version + "?")) {
-    install_package(package, package.original_version, selected_alternate_row, pkgs, false);
+    install_package(package, package.original_version, view, package.is_dev);
     return true;
   }
 
   return false;
 }
 
-void uninstall_package(PACKAGE package, vector<PACKAGE> &pkgs)
+void uninstall_package(VIEW &view)
 {
+  PACKAGE package = view.filtered_packages.at(view.selected_package);
+
   if (!confirm("Uninstall " + package.name + "?")) return;
 
   show_message("Uninstalling...");
@@ -274,23 +285,23 @@ void uninstall_package(PACKAGE package, vector<PACKAGE> &pkgs)
   if (exit_code == OK) {
     debug("Package uninstalled\n");
     show_message("Uninstalled " + package.name);
-    read_packages(nullptr, &pkgs);
+    read_packages(nullptr, view);
   } else {
     debug("Uninstall failed: %d\n", exit_code);
     show_error_message("Uninstall failed");
   }
 }
 
-void search_for_package(MAX_LENGTH &max_length, vector<PACKAGE> &filtered_packages, Search *searching, USHORT &selected_package, bool fake_http_requests)
+void search_for_package(MAX_LENGTH &max_length, VIEW &view, bool fake_http_requests)
 {
   char command[COMMAND_SIZE];
   const string host = fake_http_requests ? "http://localhost:3000" : "https://api.npms.io";
   debug("NPM_SEARCH_STRING=%s\n", NPM_SEARCH_STRING);
-  if (searching->is_search_mode() && searching->package.string.length() > 0) {
-    filtered_packages.clear();
-    snprintf(command, COMMAND_SIZE, NPM_SEARCH_STRING, "-q", host.c_str(), to_string(LIST_HEIGHT).c_str(), searching->package.string.c_str());
+  if (view.searching->is_search_mode() && view.searching->package.string.length() > 0) {
+    view.filtered_packages.clear();
+    snprintf(command, COMMAND_SIZE, NPM_SEARCH_STRING, "-q", host.c_str(), to_string(LIST_HEIGHT).c_str(), view.searching->package.string.c_str());
     debug("Get string: %s\n", command);
-    vector<string> s = get_from_cache(searching->package.string, command);
+    vector<string> s = get_from_cache(view.searching->package.string, command);
     vector<string>::iterator it = s.begin();
 
     max_length.search = 0;
@@ -301,21 +312,21 @@ void search_for_package(MAX_LENGTH &max_length, vector<PACKAGE> &filtered_packag
     while (++it != s.end()) {
       debug("Install search: %s | %s \n", (*it).c_str(), (*(it + 1)).c_str());
       max_length.search = max(max_length.search, (USHORT)(*it).length());
-      filtered_packages.push_back({
+      view.filtered_packages.push_back({
         .name = *it,
         .version = *(++it),
       });
     }
-    selected_package = 0;
+    view.selected_package = 0;
   }
 }
 
-void abort_install(main_modes &main_mode, USHORT &selected_package)
+void abort_install(VIEW &view)
 {
-  if (main_mode == INSTALL) {
-    main_mode = PACKAGES;
+  if (view.main_mode == INSTALL) {
+    view.main_mode = PACKAGES;
     show_message("Install aborted");
-    selected_package = 0;
+    view.selected_package = 0;
   }
 }
 

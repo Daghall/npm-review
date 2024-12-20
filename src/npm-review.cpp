@@ -79,7 +79,7 @@ int main(int argc, const char *argv[]) {
     // TODO: Handle invalid package name
     print_versions(view.pkgs.at(0), 0);
   } else {
-    read_packages(&max_length, &view.pkgs);
+    read_packages(&max_length, view);
   }
 
   // TODO: Sorting?
@@ -101,7 +101,7 @@ int main(int argc, const char *argv[]) {
     try {
       if (view.main_mode == INSTALL) {
         debug("Install mode\n");
-        search_for_package(max_length, view.filtered_packages, view.searching, view.selected_package, fake_http_requests);
+        search_for_package(max_length, view, fake_http_requests);
       } else {
       view.filtered_packages.clear();
         regex search_regex (view.searching->package.string);
@@ -466,7 +466,7 @@ int main(int argc, const char *argv[]) {
           if (view.alternate_window) {
             print_alternate();
           }
-          abort_install(view.main_mode, view.selected_package);
+          abort_install(view);
           break;
         case ctrl('z'):
           view.searching->disable();
@@ -476,7 +476,7 @@ int main(int argc, const char *argv[]) {
           view.searching->finalize();
           if (*view.searching->get_active_string() == "") {
             show_error_message("Ignoring empty pattern");
-            abort_install(view.main_mode, view.selected_package);
+            abort_install(view);
           }
           hide_cursor();
           break;
@@ -497,7 +497,7 @@ int main(int argc, const char *argv[]) {
             clear_message();
             hide_cursor();
 
-            abort_install(view.main_mode, view.selected_package);
+            abort_install(view);
           }
           break;
         }
@@ -621,7 +621,7 @@ int main(int argc, const char *argv[]) {
           if (view.alternate_mode == DEPENDENCIES) {
             if (view.show_sub_dependencies) {
               view.show_sub_dependencies = false;
-              get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, false, view.show_sub_dependencies, fake_http_requests);
+              get_dependencies(view, false, fake_http_requests);
             } else {
               close_alternate_window(&view.alternate_window);
               view.refresh_packages = true;
@@ -631,7 +631,7 @@ int main(int argc, const char *argv[]) {
         case 'l':
           if (view.alternate_mode == DEPENDENCIES && !view.show_sub_dependencies) {
             view.show_sub_dependencies = true;
-              get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, false, view.show_sub_dependencies, fake_http_requests);
+              get_dependencies(view, false, fake_http_requests);
           }
           break;
         case 'n':
@@ -672,7 +672,7 @@ int main(int argc, const char *argv[]) {
         case '\n':
           switch (view.alternate_mode) {
             case VERSION:
-              install_package(view.filtered_packages.at(view.selected_package), view.alternate_rows.at(view.selected_alternate_row), view.selected_alternate_row, view.pkgs, install_dev_dependency);
+              install_package(view, install_dev_dependency);
               view.refresh_packages = true;
               break;
             case DEPENDENCIES:
@@ -687,7 +687,7 @@ int main(int argc, const char *argv[]) {
         case 'u':
           {
             PACKAGE package = view.filtered_packages.at(view.selected_package);
-            view.refresh_packages = revert_package(package, view.pkgs, view.selected_alternate_row, view.alternate_mode);
+            view.refresh_packages = revert_package(package, view);
             break;
           }
         case 'g':
@@ -732,7 +732,7 @@ int main(int argc, const char *argv[]) {
         case 'i':
           if (view.filtered_packages.size() == 0) continue;
           view.alternate_mode = INFO;
-          get_info(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, fake_http_requests, view.main_mode);
+          get_info(view.filtered_packages.at(view.selected_package), view, fake_http_requests);
           break;
         case 'I':
           view.cursor_position = view.searching->initialize_search();
@@ -743,7 +743,7 @@ int main(int argc, const char *argv[]) {
         case 'l':
           if (view.filtered_packages.size() == 0) continue;
           view.alternate_mode = DEPENDENCIES;
-          get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, true, view.show_sub_dependencies, fake_http_requests);
+          get_dependencies(view, true, fake_http_requests);
           break;
         case '\n':
           if (view.filtered_packages.size() == 0) continue;
@@ -758,8 +758,7 @@ int main(int argc, const char *argv[]) {
             break;
           }
           if (view.filtered_packages.size() == 0) continue;
-          PACKAGE package = view.filtered_packages.at(view.selected_package);
-          uninstall_package(package, view.pkgs);
+          uninstall_package(view);
           view.refresh_packages = true;
           break;
         }
@@ -830,7 +829,7 @@ int main(int argc, const char *argv[]) {
           break;
         case 'u':
           PACKAGE package = view.filtered_packages.at(view.selected_package);
-          view.refresh_packages = revert_package(package, view.pkgs, view.selected_alternate_row, view.alternate_mode);
+          view.refresh_packages = revert_package(package, view);
           break;
       }
     }
@@ -1043,10 +1042,10 @@ void change_alternate_window()
     print_versions(view.filtered_packages.at(view.selected_package));
     break;
   case DEPENDENCIES:
-    get_dependencies(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, true, view.show_sub_dependencies, fake_http_requests);
+    get_dependencies(view, true, fake_http_requests);
     break;
   case INFO:
-    get_info(view.filtered_packages.at(view.selected_package), view.alternate_rows, view.selected_alternate_row, fake_http_requests, view.main_mode);
+    get_info(view.filtered_packages.at(view.selected_package), view, fake_http_requests);
     break;
   case VERSION_CHECK:
     view.selected_alternate_row = view.selected_package;
