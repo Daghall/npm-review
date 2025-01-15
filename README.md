@@ -89,9 +89,13 @@ Installation of another version can be done by selecting it (`j`/`k` and hitting
 
 Shows basic information about the package.
 
-### Dependencies (`I`/`l`)
+### Dependencies (`l`)
 
 Shows a tree view of a package's dependencies. By default only the direct dependencies are shown. To show the full tree, hit `l`. Show less with `h`.
+
+### Install (`I`)
+
+Interactive fuzzy-find install package, using [https://npms.io](https://npms.io).
 
 ### Version check (`V`)
 
