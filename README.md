@@ -1,6 +1,6 @@
 # NPM review
 
-[ncurses](https://en.wikipedia.org/wiki/Ncurses)-based [TUI](https://en.wikipedia.org/wiki/Text-based_user_interface) for reviewing and upgrading/downgrading NPM packages, viewing package info, and dependencies, with vim-like key-bindings.
+[ncurses](https://en.wikipedia.org/wiki/Ncurses)-based [TUI](https://en.wikipedia.org/wiki/Text-based_user_interface) for reviewing and upgrading/downgrading/installing NPM packages, viewing package info, and dependencies, with vim-like key-bindings.
 
 Heavily inspired by [tig](https://github.com/jonas/tig).
 
@@ -8,7 +8,7 @@ Heavily inspired by [tig](https://github.com/jonas/tig).
 
 ## Flags
 
-  - `-p <package name>` – Specify a package name to use instead of `package.json`. Opens [version check](#versions-check-v) view directly
+  - `-p <package name>` – Specify a package name to use instead of `package.json`. Opens [versions](#versions-enter) view directly
   - `-V` – Initialize with [version check](#versions-check-v)
   - See [development](#development) for more
 
@@ -77,7 +77,7 @@ $ npm-review /e.*p
 
 The active window is the package window, unless one of the alternate views is open. The alternate view can be scrolled with `j` and `k`, respectively.
 
-There are threw alternate views:
+There are a few alternate views:
 
 ### Versions (`Enter`)
 
