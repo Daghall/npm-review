@@ -15,6 +15,7 @@ void uninstall_package(VIEW &view);
 bool revert_package(PACKAGE &package, VIEW &view);
 void search_for_package(MAX_LENGTH &max_length, VIEW &view, bool fake_http_requests);
 void abort_install(VIEW &view);
+string get_package_name(PACKAGE &package);
 PACKAGE find_package(vector<PACKAGE> &pkgs, const string &name);
 
 #endif // _NPM_H

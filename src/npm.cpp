@@ -10,6 +10,10 @@
 #include "types.h"
 #include "npm-review.h"
 
+const char *READ_PACKAGE_JSON_STRING = {
+#include "../build/read-package-json"
+};
+
 const char *DEPENDENCIES_STRING = {
 #include "../build/dependencies"
 };
@@ -26,14 +30,19 @@ const char *NPM_SEARCH_STRING = {
 #include "../build/npm-search"
 };
 
+#define ALIAS_LENGTH (string(" (as )").length())
+
 CACHES *caches = get_caches();
 
 void read_packages(MAX_LENGTH *max_length, VIEW &view)
 {
   debug("Reading packages\n");
-  string command = "for dep in .dependencies .devDependencies; do jq $dep' | keys[] as $key | \"\\($key) \\(.[$key] | sub(\"[~^]\"; \"\")) '$dep'\"' -r 2> /dev/null < package.json; done";
+  char command[COMMAND_SIZE];
+  snprintf(command, COMMAND_SIZE, READ_PACKAGE_JSON_STRING, "package.json");
   vector<string> packages = shell_command(command);
   view.pkgs.clear();
+
+  debug("Lines read: %d\n", packages.size());
 
   version_type diff_versions = get_diff_versions();
 
@@ -42,24 +51,34 @@ void read_packages(MAX_LENGTH *max_length, VIEW &view)
     string name = strings.at(0);
     string version = strings.at(1);
     string origin = strings.at(2);
+    string alias = strings.at(0);
+
+    if (strings.size() > 3) {
+      alias = strings.at(3);
+    }
 
     const version_type::iterator version_item = diff_versions.find(name);
     const string original_version = version_item != diff_versions.end() ? version_item->second : "";
     debug("Package: %s %s \t\t\t%s\n", name.c_str(), version.c_str(), original_version.c_str());
 
-    view.pkgs.push_back({
-      .name = name,
-      .version = version,
-      .original_version = original_version,
-      .is_dev = origin == ".devDependencies"
-    });
+    size_t nameLength = name != alias
+      ? name.length() + alias.length() + ALIAS_LENGTH
+      : name.length();
 
-    if (max_length && name.length() > max_length->name) {
-      max_length->name = name.length();
+    if (max_length && nameLength > max_length->name) {
+      max_length->name = nameLength;
     }
     if (max_length && version.length() > max_length->version) {
       max_length->version = version.length();
     }
+
+    view.pkgs.push_back({
+      .name = name,
+      .alias = alias,
+      .version = version,
+      .original_version = original_version,
+      .is_dev = origin == ".devDependencies"
+    });
   });
 }
 
@@ -98,19 +117,24 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_
     return fake_response;
   } else { // }}}
     char command[COMMAND_SIZE];
-    snprintf(command, COMMAND_SIZE, VERSIONS_STRING, package.name.c_str());
+    snprintf(command, COMMAND_SIZE, VERSIONS_STRING, package.alias.c_str());
     if (alternate_mode != VERSION_CHECK) {
       init_alternate_window();
     }
 
-    return get_from_cache(package.name, command, alternate_mode);
+    return get_from_cache(package.alias, command, alternate_mode);
   }
 }
 
 void get_dependencies(VIEW &view, bool init, bool fake_http_requests)
 {
   PACKAGE package = view.filtered_packages.at(view.selected_package);
-  string package_name = escape_slashes(package.name);
+  string package_name = escape_slashes(
+    package.name != package.alias
+      ? package.name + "@npm:" + package.alias
+      : package.name
+  );
+  debug("Get dependencies: %s\n", package_name.c_str());
   string selected;
 
   if (!init) {
@@ -169,7 +193,7 @@ void get_dependencies(VIEW &view, bool init, bool fake_http_requests)
 
 void get_info(PACKAGE package, VIEW &view, bool fake_http_requests)
 {
-  string package_name = escape_slashes(package.name);
+  string package_name = get_package_name(package);
   const char* package_version = package.version.c_str();
 
   if (fake_http_requests) { // {{{1
@@ -219,13 +243,16 @@ void install_package(PACKAGE &package, const string new_version, VIEW &view, boo
 {
   show_message("Installing...");
 
-  string package_name = escape_slashes(package.name);
+  string package_name = get_package_name(package);
 
   caches->dependencies->erase(package_name);
   caches->info->erase(package_name);
 
   char command[COMMAND_SIZE];
-  snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent %s", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "--save-dev" : "--save");
+  const string alias = (package.alias != package.name)
+    ? package.name + "@npm:" + package.alias
+    : package.name;
+  snprintf(command, COMMAND_SIZE, "npm install %s@%s --silent %s", alias.c_str(), new_version.c_str(), install_dev_dependency ? "--save-dev" : "--save");
   int exit_code = sync_shell_command(command, [](char* line) {
     debug("NPM INSTALL: %s\n", line);
   });
@@ -233,8 +260,8 @@ void install_package(PACKAGE &package, const string new_version, VIEW &view, boo
   hide_cursor();
 
   if (exit_code == OK) {
-    debug("Installed %s@%s %s\n", package.name.c_str(), new_version.c_str(), install_dev_dependency ? "(DEV)" : "");
-    show_message("Installed " + package.name + "@" + new_version + (install_dev_dependency ? " (DEV)" : ""));
+    debug("Installed %s@%s %s\n", package.alias.c_str(), new_version.c_str(), install_dev_dependency ? "(DEV)" : "");
+    show_message("Installed " + package.alias + "@" + new_version + (install_dev_dependency ? " (DEV)" : ""));
     package.version = new_version;
     read_packages(nullptr, view);
     view.selected_alternate_row = -1;
@@ -328,6 +355,15 @@ void abort_install(VIEW &view)
     show_message("Install aborted");
     view.selected_package = 0;
   }
+}
+
+string get_package_name(PACKAGE &package)
+{
+  return escape_slashes(
+    package.name != package.alias
+      ? package.alias
+      : package.name
+  );
 }
 
 PACKAGE find_package(vector<PACKAGE> &pkgs, const string &name)

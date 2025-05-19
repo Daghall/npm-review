@@ -9,6 +9,8 @@
 # - Print package name and version for each package that has actually changed
 #   version. If a package with trailing comma is added or removed, it will
 #   cause false positives.
+#   `npm` sorts the list of packages, making this work. If a package is
+#   manually moved from one place to another, it will not be detected.
 
 git_command=${1:-git}
 
@@ -25,7 +27,7 @@ $git_command diff --word-diff=porcelain -U0 package.json 2> /dev/null | \
       i = 0;
       while (i < NR) {
         if (a[i + 1] != a[i + 2]) {
-          print a[i] " " a[i + 1]
+          print a[i] "\t" a[i + 1]
         }
       i += 3
     }

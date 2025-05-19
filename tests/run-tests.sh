@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
+# Declare tests
+declare -A tests
+tests["diff-versions"]="./scripts/diff-versions.sh ./tests/mocks/git-diff.sh"
+tests["read-package-json"]="./scripts/read-package-json.sh ./tests/read-package-json.input"
 
-# Determine diff program
+
+# Determine diff program to use when pretty-printing
 which delta >> /dev/null
 if [[ $? -eq 0 ]]; then
   diff_cmd="delta --color-only --paging=never"
@@ -19,15 +24,18 @@ function print_diff() {
     -e 's/$/\x1b[0m/g'
 }
 
-# diff-versions.sh
-./scripts/diff-versions.sh ./tests/mocks/git-diff.sh > /tmp/npm-review-version.actual
+# Execute tests
+for test in "${!tests[@]}"; do
+    output=/tmp/test_$test.actual
+    # echo $output
+    rm $output 2> /dev/null
+    ${tests[$test]} > $output
+    res=$(diff -u $output tests/$test.expected)
 
-res=$(diff -u tests/diff-versions.expected /tmp/npm-review-version.actual)
-
-if [ $? -ne 0 ]; then
-  echo -e "\x1b[31mTest failed\x1b[0m"
-  print_diff "$res"
-else
-  echo -e "\x1b[32mTest passed\x1b[0m"
-fi
-
+  if [[ $? -ne 0 ]]; then
+    printf "\x1b[31m· %-24s ✗\x1b[0m\n" $test
+    print_diff "$res"
+  else
+    printf "\x1b[32m· %-24s ✔\x1b[0m\n" $test
+  fi 
+done

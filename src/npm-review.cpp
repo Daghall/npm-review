@@ -107,7 +107,7 @@ int main(int argc, const char *argv[]) {
         regex search_regex (view.searching->package.string);
         view.regex_parse_error = "";
         copy_if(view.pkgs.begin(), view.pkgs.end(), back_inserter(view.filtered_packages), [&search_regex](PACKAGE &package) {
-          return regex_search(package.name, search_regex);
+          return regex_search(package.name + package.alias, search_regex);
         });
       }
     } catch (const regex_error &e) {
@@ -145,8 +145,11 @@ int main(int argc, const char *argv[]) {
       if (package.original_version != "") {
         wattron(view.package_window, COLOR_PAIR(COLOR_EDITED_PACKAGE) | A_BOLD);
       }
+      const string package_name = package.name != package.alias
+        ? package.name + " (as " + package.alias + ")"
+        : package.name;
       const USHORT name_max_length = view.main_mode == INSTALL ? max_length.search : max_length.name;
-      wprintw(view.package_window, " %-*s  %-*s%-*s \n", name_max_length, package.name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
+      wprintw(view.package_window, " %-*s  %-*s%-*s \n", name_max_length, package_name.c_str(), max_length.version, package.version.c_str(), COLS, package.is_dev ? "  (DEV)" : "");
     });
 
     // Package scrolling

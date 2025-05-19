@@ -12,7 +12,7 @@ npm ls --all 2> /dev/null | \
     -e '$d' \
     -e 's/..// ' \
     -e 's/ deduped//' \
-    -e 's/@/\t/g' \
+    -e 's/@([0-9])/\t\1/g' \
     -e 's/(([─┬]) )/\2\t/g' \
     -e 's/ \t/@/g' | \
   tr -s '\t' | \

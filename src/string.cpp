@@ -2,17 +2,19 @@
 #include <stdio.h>
 #include "types.h"
 
+#define split_char "\t"
+
 vector<string> split_string(string package_string)
 {
   char buffer[1024];
   vector<string> result = vector<string>();
 
   strcpy(buffer, package_string.c_str());
-  char *str = strtok(buffer, " ");
+  char *str = strtok(buffer, split_char);
 
   while (str != NULL) {
     result.push_back(string(str));
-    str = strtok(NULL, " ");
+    str = strtok(NULL, split_char);
   }
 
   return result;

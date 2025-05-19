@@ -23,6 +23,7 @@ typedef unordered_map<VERSION_TYPE> version_type;
 
 typedef struct {
   string name;
+  string alias;
   string version;
   bool is_dev;
   string original_version;
