@@ -1,0 +1,304 @@
+linda@0.14.0 /Users/markus.daghall/git/linda
+├─┬ bootstrap@5.0.0
+│ └── @popperjs/core@2.11.8
+├── emacs@npm:vim@0.1.0
+├─┬ eslint@5.16.0
+│ ├─┬ @babel/code-frame@7.12.13
+│ │ └─┬ @babel/highlight@7.13.10
+│ │   ├── @babel/helper-validator-identifier@7.12.11
+│ │   ├── chalk@2.4.2 deduped
+│ │   └── js-tokens@4.0.0
+│ ├─┬ ajv@6.12.6
+│ │ ├── fast-deep-equal@3.1.3
+│ │ ├── fast-json-stable-stringify@2.1.0
+│ │ ├── json-schema-traverse@0.4.1
+│ │ └─┬ uri-js@4.4.1
+│ │   └── punycode@2.1.1
+│ ├─┬ chalk@2.4.2
+│ │ ├─┬ ansi-styles@3.2.1
+│ │ │ └─┬ color-convert@1.9.3
+│ │ │   └── color-name@1.1.3
+│ │ ├── escape-string-regexp@1.0.5
+│ │ └─┬ supports-color@5.5.0
+│ │   └── has-flag@3.0.0
+│ ├─┬ cross-spawn@6.0.6
+│ │ ├── nice-try@1.0.5
+│ │ ├── path-key@2.0.1
+│ │ ├── semver@5.7.2 deduped
+│ │ ├─┬ shebang-command@1.2.0
+│ │ │ └── shebang-regex@1.0.0
+│ │ └─┬ which@1.3.1
+│ │   └── isexe@2.0.0
+│ ├─┬ debug@4.3.1
+│ │ └── ms@2.1.2
+│ ├─┬ doctrine@3.0.0
+│ │ └── esutils@2.0.3 deduped
+│ ├─┬ eslint-scope@4.0.3
+│ │ ├─┬ esrecurse@4.3.0
+│ │ │ └── estraverse@5.2.0
+│ │ └── estraverse@4.3.0
+│ ├─┬ eslint-utils@1.4.3
+│ │ └── eslint-visitor-keys@1.3.0 deduped
+│ ├── eslint-visitor-keys@1.3.0
+│ ├─┬ espree@5.0.1
+│ │ ├─┬ acorn-jsx@5.3.1
+│ │ │ └── acorn@8.13.0 deduped
+│ │ ├── acorn@6.4.2
+│ │ └── eslint-visitor-keys@1.3.0 deduped
+│ ├─┬ esquery@1.4.0
+│ │ └── estraverse@5.2.0
+│ ├── esutils@2.0.3
+│ ├─┬ file-entry-cache@5.0.1
+│ │ └─┬ flat-cache@2.0.1
+│ │   ├── flatted@2.0.2
+│ │   ├─┬ rimraf@2.6.3
+│ │   │ └── glob@7.1.6 deduped
+│ │   └─┬ write@1.0.3
+│ │     └── mkdirp@0.5.5 deduped
+│ ├── functional-red-black-tree@1.0.1
+│ ├─┬ glob@7.1.6
+│ │ ├── fs.realpath@1.0.0
+│ │ ├─┬ inflight@1.0.6
+│ │ │ ├── once@1.4.0 deduped
+│ │ │ └── wrappy@1.0.2
+│ │ ├── inherits@2.0.4
+│ │ ├── minimatch@3.1.2 deduped
+│ │ ├─┬ once@1.4.0
+│ │ │ └── wrappy@1.0.2 deduped
+│ │ └── path-is-absolute@1.0.1
+│ ├── globals@11.12.0
+│ ├── ignore@4.0.6
+│ ├─┬ import-fresh@3.3.0
+│ │ ├─┬ parent-module@1.0.1
+│ │ │ └── callsites@3.1.0
+│ │ └── resolve-from@4.0.0
+│ ├── imurmurhash@0.1.4
+│ ├─┬ inquirer@6.5.2
+│ │ ├── ansi-escapes@3.2.0
+│ │ ├── chalk@2.4.2 deduped
+│ │ ├─┬ cli-cursor@2.1.0
+│ │ │ └─┬ restore-cursor@2.0.0
+│ │ │   ├─┬ onetime@2.0.1
+│ │ │   │ └── mimic-fn@1.2.0
+│ │ │   └── signal-exit@3.0.3
+│ │ ├── cli-width@2.2.1
+│ │ ├─┬ external-editor@3.1.0
+│ │ │ ├── chardet@0.7.0
+│ │ │ ├─┬ iconv-lite@0.4.24
+│ │ │ │ └── safer-buffer@2.1.2
+│ │ │ └─┬ tmp@0.0.33
+│ │ │   └── os-tmpdir@1.0.2
+│ │ ├─┬ figures@2.0.0
+│ │ │ └── escape-string-regexp@1.0.5 deduped
+│ │ ├── lodash@4.17.21 deduped
+│ │ ├── mute-stream@0.0.7
+│ │ ├── run-async@2.4.1
+│ │ ├─┬ rxjs@6.6.7
+│ │ │ └── tslib@1.14.1
+│ │ ├─┬ string-width@2.1.1
+│ │ │ ├── is-fullwidth-code-point@2.0.0
+│ │ │ └── strip-ansi@4.0.0 deduped
+│ │ ├─┬ strip-ansi@5.2.0
+│ │ │ └── ansi-regex@4.1.1
+│ │ └── through@2.3.8
+│ ├─┬ js-yaml@3.14.1
+│ │ ├─┬ argparse@1.0.10
+│ │ │ └── sprintf-js@1.0.3
+│ │ └── esprima@4.0.1
+│ ├── json-stable-stringify-without-jsonify@1.0.1
+│ ├─┬ levn@0.3.0
+│ │ ├── prelude-ls@1.1.2
+│ │ └─┬ type-check@0.3.2
+│ │   └── prelude-ls@1.1.2 deduped
+│ ├── lodash@4.17.21
+│ ├─┬ minimatch@3.1.2
+│ │ └─┬ brace-expansion@1.1.11
+│ │   ├── balanced-match@1.0.2
+│ │   └── concat-map@0.0.1
+│ ├─┬ mkdirp@0.5.5
+│ │ └── minimist@1.2.6
+│ ├── natural-compare@1.4.0
+│ ├─┬ optionator@0.8.3
+│ │ ├── deep-is@0.1.3
+│ │ ├── fast-levenshtein@2.0.6
+│ │ ├── levn@0.3.0 deduped
+│ │ ├── prelude-ls@1.1.2 deduped
+│ │ ├── type-check@0.3.2 deduped
+│ │ └── word-wrap@1.2.4
+│ ├── path-is-inside@1.0.2
+│ ├── progress@2.0.3
+│ ├── regexpp@2.0.1
+│ ├── semver@5.7.2
+│ ├─┬ strip-ansi@4.0.0
+│ │ └── ansi-regex@3.0.1
+│ ├── strip-json-comments@2.0.1
+│ ├─┬ table@5.4.6
+│ │ ├── ajv@6.12.6 deduped
+│ │ ├── lodash@4.17.21 deduped
+│ │ ├─┬ slice-ansi@2.1.0
+│ │ │ ├── ansi-styles@3.2.1 deduped
+│ │ │ ├── astral-regex@1.0.0
+│ │ │ └── is-fullwidth-code-point@2.0.0 deduped
+│ │ └─┬ string-width@3.1.0
+│ │   ├── emoji-regex@7.0.3
+│ │   ├── is-fullwidth-code-point@2.0.0 deduped
+│ │   └─┬ strip-ansi@5.2.0
+│ │     └── ansi-regex@4.1.1
+│ └── text-table@0.2.0
+├── jquery@3.6.0
+├── popper.js@1.16.1
+├── redom@3.27.1
+├─┬ webpack-cli@5.1.1
+│ ├── @discoveryjs/json-ext@0.5.7
+│ ├─┬ @webpack-cli/configtest@2.1.0
+│ │ ├── webpack-cli@5.1.1 deduped
+│ │ └── webpack@5.95.0 deduped
+│ ├─┬ @webpack-cli/info@2.0.1
+│ │ ├── webpack-cli@5.1.1 deduped
+│ │ └── webpack@5.95.0 deduped
+│ ├─┬ @webpack-cli/serve@2.0.4
+│ │ ├── webpack-cli@5.1.1 deduped
+│ │ └── webpack@5.95.0 deduped
+│ ├── colorette@2.0.20
+│ ├── commander@10.0.1
+│ ├─┬ cross-spawn@7.0.6
+│ │ ├── path-key@3.1.1
+│ │ ├─┬ shebang-command@2.0.0
+│ │ │ └── shebang-regex@3.0.0
+│ │ └─┬ which@2.0.2
+│ │   └── isexe@2.0.0 deduped
+│ ├── envinfo@7.8.1
+│ ├── fastest-levenshtein@1.0.16
+│ ├─┬ import-local@3.1.0
+│ │ ├─┬ pkg-dir@4.2.0
+│ │ │ └─┬ find-up@4.1.0
+│ │ │   ├─┬ locate-path@5.0.0
+│ │ │   │ └─┬ p-locate@4.1.0
+│ │ │   │   └─┬ p-limit@2.3.0
+│ │ │   │     └── p-try@2.2.0
+│ │ │   └── path-exists@4.0.0
+│ │ └─┬ resolve-cwd@3.0.0
+│ │   └── resolve-from@5.0.0
+│ ├── interpret@3.1.1
+│ ├─┬ rechoir@0.8.0
+│ │ └─┬ resolve@1.22.2
+│ │   ├─┬ is-core-module@2.12.0
+│ │   │ └─┬ has@1.0.3
+│ │   │   └── function-bind@1.1.1
+│ │   ├── path-parse@1.0.7
+│ │   └── supports-preserve-symlinks-flag@1.0.0
+│ ├─┬ webpack-merge@5.8.0
+│ │ ├─┬ clone-deep@4.0.1
+│ │ │ ├─┬ is-plain-object@2.0.4
+│ │ │ │ └── isobject@3.0.1
+│ │ │ ├── kind-of@6.0.3
+│ │ │ └─┬ shallow-clone@3.0.1
+│ │ │   └── kind-of@6.0.3 deduped
+│ │ └── wildcard@2.0.1
+│ └── webpack@5.95.0 deduped
+└─┬ webpack@5.95.0
+  ├── @types/estree@1.0.6
+  ├─┬ @webassemblyjs/ast@1.12.1
+  │ ├─┬ @webassemblyjs/helper-numbers@1.11.6
+  │ │ ├── @webassemblyjs/floating-point-hex-parser@1.11.6
+  │ │ ├── @webassemblyjs/helper-api-error@1.11.6 deduped
+  │ │ └── @xtuc/long@4.2.2
+  │ └── @webassemblyjs/helper-wasm-bytecode@1.11.6
+  ├─┬ @webassemblyjs/wasm-edit@1.12.1
+  │ ├── @webassemblyjs/ast@1.12.1 deduped
+  │ ├── @webassemblyjs/helper-buffer@1.12.1
+  │ ├── @webassemblyjs/helper-wasm-bytecode@1.11.6 deduped
+  │ ├─┬ @webassemblyjs/helper-wasm-section@1.12.1
+  │ │ ├── @webassemblyjs/ast@1.12.1 deduped
+  │ │ ├── @webassemblyjs/helper-buffer@1.12.1 deduped
+  │ │ ├── @webassemblyjs/helper-wasm-bytecode@1.11.6 deduped
+  │ │ └── @webassemblyjs/wasm-gen@1.12.1 deduped
+  │ ├─┬ @webassemblyjs/wasm-gen@1.12.1
+  │ │ ├── @webassemblyjs/ast@1.12.1 deduped
+  │ │ ├── @webassemblyjs/helper-wasm-bytecode@1.11.6 deduped
+  │ │ ├── @webassemblyjs/ieee754@1.11.6 deduped
+  │ │ ├── @webassemblyjs/leb128@1.11.6 deduped
+  │ │ └── @webassemblyjs/utf8@1.11.6 deduped
+  │ ├─┬ @webassemblyjs/wasm-opt@1.12.1
+  │ │ ├── @webassemblyjs/ast@1.12.1 deduped
+  │ │ ├── @webassemblyjs/helper-buffer@1.12.1 deduped
+  │ │ ├── @webassemblyjs/wasm-gen@1.12.1 deduped
+  │ │ └── @webassemblyjs/wasm-parser@1.12.1 deduped
+  │ ├── @webassemblyjs/wasm-parser@1.12.1 deduped
+  │ └─┬ @webassemblyjs/wast-printer@1.12.1
+  │   ├── @webassemblyjs/ast@1.12.1 deduped
+  │   └── @xtuc/long@4.2.2 deduped
+  ├─┬ @webassemblyjs/wasm-parser@1.12.1
+  │ ├── @webassemblyjs/ast@1.12.1 deduped
+  │ ├── @webassemblyjs/helper-api-error@1.11.6
+  │ ├── @webassemblyjs/helper-wasm-bytecode@1.11.6 deduped
+  │ ├─┬ @webassemblyjs/ieee754@1.11.6
+  │ │ └── @xtuc/ieee754@1.2.0
+  │ ├─┬ @webassemblyjs/leb128@1.11.6
+  │ │ └── @xtuc/long@4.2.2 deduped
+  │ └── @webassemblyjs/utf8@1.11.6
+  ├─┬ acorn-import-attributes@1.9.5
+  │ └── acorn@8.13.0 deduped
+  ├── acorn@8.13.0
+  ├─┬ browserslist@4.24.2
+  │ ├── caniuse-lite@1.0.30001669
+  │ ├── electron-to-chromium@1.5.45
+  │ ├── node-releases@2.0.18
+  │ └─┬ update-browserslist-db@1.1.1
+  │   ├── browserslist@4.24.2 deduped
+  │   ├── escalade@3.2.0
+  │   └── picocolors@1.1.1
+  ├── chrome-trace-event@1.0.3
+  ├─┬ enhanced-resolve@5.17.1
+  │ ├── graceful-fs@4.2.11 deduped
+  │ └── tapable@2.2.1 deduped
+  ├── es-module-lexer@1.5.4
+  ├─┬ eslint-scope@5.1.1
+  │ ├── esrecurse@4.3.0 deduped
+  │ └── estraverse@4.3.0 deduped
+  ├── events@3.3.0
+  ├── glob-to-regexp@0.4.1
+  ├── graceful-fs@4.2.11
+  ├── json-parse-even-better-errors@2.3.1
+  ├── loader-runner@4.3.0
+  ├─┬ mime-types@2.1.35
+  │ └── mime-db@1.52.0
+  ├── neo-async@2.6.2
+  ├─┬ schema-utils@3.3.0
+  │ ├── @types/json-schema@7.0.15
+  │ ├─┬ ajv-keywords@3.5.2
+  │ │ └── ajv@6.12.6 deduped
+  │ └── ajv@6.12.6 deduped
+  ├── tapable@2.2.1
+  ├─┬ terser-webpack-plugin@5.3.10
+  │ ├─┬ @jridgewell/trace-mapping@0.3.25
+  │ │ ├── @jridgewell/resolve-uri@3.1.2
+  │ │ └── @jridgewell/sourcemap-codec@1.5.0
+  │ ├─┬ jest-worker@27.5.1
+  │ │ ├─┬ @types/node@22.7.9
+  │ │ │ └── undici-types@6.19.8
+  │ │ ├── merge-stream@2.0.0
+  │ │ └─┬ supports-color@8.1.1
+  │ │   └── has-flag@4.0.0
+  │ ├── schema-utils@3.3.0 deduped
+  │ ├─┬ serialize-javascript@6.0.2
+  │ │ └─┬ randombytes@2.1.0
+  │ │   └── safe-buffer@5.2.1
+  │ ├─┬ terser@5.36.0
+  │ │ ├─┬ @jridgewell/source-map@0.3.6
+  │ │ │ ├─┬ @jridgewell/gen-mapping@0.3.5
+  │ │ │ │ ├── @jridgewell/set-array@1.2.1
+  │ │ │ │ ├── @jridgewell/sourcemap-codec@1.5.0 deduped
+  │ │ │ │ └── @jridgewell/trace-mapping@0.3.25 deduped
+  │ │ │ └── @jridgewell/trace-mapping@0.3.25 deduped
+  │ │ ├── acorn@8.13.0 deduped
+  │ │ ├── commander@2.20.3
+  │ │ └─┬ source-map-support@0.5.21
+  │ │   ├── buffer-from@1.1.2
+  │ │   └── source-map@0.6.1
+  │ └── webpack@5.95.0 deduped
+  ├─┬ watchpack@2.4.2
+  │ ├── glob-to-regexp@0.4.1 deduped
+  │ └── graceful-fs@4.2.11 deduped
+  └── webpack-sources@3.2.3
+

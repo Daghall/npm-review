@@ -1,10 +1,16 @@
 #!/usr/bin/env sh
 
+if [[ $# -gt 1 ]]; then
+  npm_binary=$1
+  shift
+else
+  npm_binary=npm
+fi
+
 package=$1
-pattern="${2:-^$}"
 
 # SCRIPT
-npm ls --all 2> /dev/null | \
+$npm_binary ls --all 2> /dev/null | \
   sed 's/ UNMET DEPENDENCY/ !/' | \
   sed 's/ UNMET OPTIONAL DEPENDENCY/ !⎇/' | \
   sed -n "/^... $package@/,/^[├└]/p" | \
@@ -16,7 +22,7 @@ npm ls --all 2> /dev/null | \
     -e 's/(([─┬]) )/\2\t/g' \
     -e 's/ \t/@/g' | \
   tr -s '\t' | \
-  grep -v "$pattern" | \
+  grep -v "^$" | \
   gawk -F '\t' '\
     BEGIN {max = 0} \
     { \

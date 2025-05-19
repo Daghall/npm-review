@@ -1,0 +1,4 @@
+bootstrap     # First package
+eslint        # Lots of dependencies
+emacs@npm:vim # Aliased package
+webpack       # Last package

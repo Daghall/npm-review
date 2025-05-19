@@ -171,7 +171,7 @@ void get_dependencies(VIEW &view, bool init, bool fake_http_requests)
     }
   } else { // }}}
     char command[COMMAND_SIZE];
-    snprintf(command, COMMAND_SIZE, DEPENDENCIES_STRING, package_name.c_str(), "^$");
+    snprintf(command, COMMAND_SIZE, DEPENDENCIES_STRING, "npm", package_name.c_str());
     init_alternate_window();
     vector<string> dependency_data = get_from_cache(package_name, command, DEPENDENCIES);
 

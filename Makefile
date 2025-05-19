@@ -55,6 +55,7 @@ includes:
 		> $(BUILD_DIR)/$$(basename $$file .sh); \
 	done
 
+t: test
 test:
 	@./tests/run-tests.sh
 
