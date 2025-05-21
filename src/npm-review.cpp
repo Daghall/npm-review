@@ -243,6 +243,11 @@ int main(int argc, const char *argv[]) {
 
     const short character = getch();
 
+    if (character == ctrl('_')) {
+      dump_screen(view);
+      continue;
+    }
+
     // Handle rezising
     if (character == KEY_RESIZE) {
       clear();
