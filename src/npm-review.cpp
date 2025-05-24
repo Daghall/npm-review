@@ -26,6 +26,7 @@ VIEW view = {
   .main_mode = PACKAGES,
   .refresh_packages = true,
   .cursor_position = 1,
+  .config_file = "package.json",
 };
 
 regex dependency_root_pattern ("^(└|├)");
@@ -37,6 +38,10 @@ int main(int argc, const char *argv[]) {
     switch (argv[argc][0]) {
       case '-':
         switch (argv[argc][1]) {
+          case 'c':
+            // TODO: Handle missing argument
+            view.config_file = argv[argc + 1];
+            break;
           case 'd':
             init_logging();
             break;

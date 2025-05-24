@@ -68,6 +68,7 @@ typedef struct {
   string regex_parse_error;
   Search *searching;
   USHORT cursor_position;
+  string config_file;
 } VIEW;
 
 #endif // _TYPES_H

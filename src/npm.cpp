@@ -38,7 +38,7 @@ void read_packages(MAX_LENGTH *max_length, VIEW &view)
 {
   debug("Reading packages\n");
   char command[COMMAND_SIZE];
-  snprintf(command, COMMAND_SIZE, READ_PACKAGE_JSON_STRING, "package.json");
+  snprintf(command, COMMAND_SIZE, READ_PACKAGE_JSON_STRING, view.config_file.c_str());
   vector<string> packages = shell_command(command);
   view.pkgs.clear();
 
