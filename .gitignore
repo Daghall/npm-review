@@ -2,5 +2,6 @@ node_modules/
 build/
 log
 package*.json
-npm-review
+/npm-review
+/test-runner
 *.dSYM/*

@@ -256,7 +256,7 @@ int main(int argc, const char *argv[]) {
     // Handle rezising
     if (character == KEY_RESIZE) {
       clear();
-      // TODO: Warn about too small screen? 44 seems to be minimum width
+      // TODO: Warn about too small screen? 45 seems to be minimum width, 11 minumum height
       debug("Resizing... Columns: %d, Lines: %d\n", COLS, LINES);
       view.refresh_packages = true;
       continue;
