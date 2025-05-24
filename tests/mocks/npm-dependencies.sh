@@ -1,1 +1,1 @@
-cat ./tests/dependencies.input
+cat ./tests/scripts/dependencies.input

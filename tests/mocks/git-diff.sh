@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-cat ./tests/diff-versions.input
+cat ./tests/scripts/diff-versions.input

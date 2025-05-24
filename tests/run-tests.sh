@@ -5,7 +5,7 @@ exit_code=0
 # Declare tests
 declare -A tests
 tests["diff-versions"]="./scripts/diff-versions.sh ./tests/mocks/git-diff.sh"
-tests["read-package-json"]="./scripts/read-package-json.sh ./tests/read-package-json.input"
+tests["read-package-json"]="./scripts/read-package-json.sh ./tests/scripts/read-package-json.input"
 tests["dependencies"]="./scripts/dependencies.sh ./tests/mocks/npm-dependencies.sh %s"
 
 
@@ -35,21 +35,21 @@ function run_test() {
   output=/tmp/test_$test_name.actual
   rm $output 2> /dev/null
   $cmd > $output
-  res=$(diff -u $output tests/$test_name.expected)
+  res=$(diff -u $output tests/scripts/$test_name.expected)
 
   if [[ $? -ne 0 ]]; then
     exit_code=$((exit_code + 1))
-    printf "\x1b[31m· %-30s ✗\x1b[0m\n" $test_name
+    printf "  \x1b[31m· %-30s ✗\x1b[0m\n" $test_name
     print_diff "$res"
   else
-    printf "\x1b[32m· %-30s ✔\x1b[0m\n" $test_name
+    printf "  \x1b[32m· %-30s ✔\x1b[0m\n" $test_name
   fi
 }
 
 # Execute all tests
 for test in "${!tests[@]}"; do
-  if [[ -f "tests/$test.variations" ]]; then
-    sed 's/ *#.*//g' tests/$test.variations | \
+  if [[ -f "tests/scripts/$test.variations" ]]; then
+    sed 's/ *#.*//g' tests/scripts/$test.variations | \
       while read -r variation; do
         test_cmd=$(printf "${tests[$test]}\n" $variation)
         run_test "$test-$variation" "$test_cmd"

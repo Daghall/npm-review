@@ -57,6 +57,7 @@ includes:
 
 t: test
 test:
+	@echo "Scripts"
 	@./tests/run-tests.sh
 
 clean:
