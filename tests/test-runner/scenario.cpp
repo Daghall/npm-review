@@ -78,8 +78,6 @@ void run_scenario(SCENARIO scenario)
     printf("\n%s", RESET);
     close(master_fd);
   }
-
-  // TODO: Store the result somehow?
 }
 
 vector<string> read_result()

@@ -1,0 +1,6 @@
+default       # The license is a simple string,
+              # keywords and depencecies are present
+
+alternative   # The license is an object with the name
+              # in the `type` property, keywords and
+              # dependencies are missing

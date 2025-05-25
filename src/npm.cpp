@@ -224,7 +224,7 @@ void get_info(PACKAGE package, VIEW &view, bool fake_http_requests)
   } else { // }}}
     char command[COMMAND_SIZE];
     const char* version = view.main_mode == INSTALL ? "null" : package_version;
-    snprintf(command, COMMAND_SIZE, INFO_STRING, package_name.c_str(), version, version, version);
+    snprintf(command, COMMAND_SIZE, INFO_STRING, "npm", package_name.c_str(), version, version, version);
     init_alternate_window();
     view.alternate_rows = get_from_cache(package_name, command, INFO);
   }

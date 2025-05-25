@@ -8,8 +8,6 @@ namespace fs = filesystem;
 
 void run_feature(FEATURE feature)
 {
-  // TODO: Return scenario statistics?
-
   printf("  Feature: %s\n", feature.name.c_str());
 
   for (const SCENARIO &scenario : feature.scenarios) {

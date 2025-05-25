@@ -15,7 +15,7 @@
  mal                     1.0.0                    
  marty (as marty/mcfly)  5.1.0                    
  river                   5.0.0                    
- spike                   4.1.3                    
+ spike                   4.1.2                    
  willow                  1.2.0                    
  [packages]                                  1/15 
                                                   
@@ -37,7 +37,7 @@ j
  mal                     1.0.0                    
  marty (as marty/mcfly)  5.1.0                    
  river                   5.0.0                    
- spike                   4.1.3                    
+ spike                   4.1.2                    
  willow                  1.2.0                    
  [packages]                                  2/15 
                                                   

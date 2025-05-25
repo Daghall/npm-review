@@ -29,4 +29,6 @@ int main() {
   if (result.failed_tests > 0) {
     printf("  %s%s Failed: %*hu%s\n", FAILED, RED, max_width, result.failed_tests, RESET);
   }
+
+  printf("\n");
 }

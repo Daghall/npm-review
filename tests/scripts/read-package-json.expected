@@ -5,7 +5,7 @@ jayne	2.4.0	.dependencies
 mal	1.0.0	.dependencies
 marty	5.1.0	.dependencies	marty/mcfly
 river	5.0.0	.dependencies
-spike	4.1.3	.dependencies
+spike	4.1.2	.dependencies
 willow	1.2.0	.dependencies
 ang	2.3.0	.devDependencies
 katara	4.1.3	.devDependencies

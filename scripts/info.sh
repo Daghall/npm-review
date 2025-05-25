@@ -1,11 +1,19 @@
 #!/usr/bin/env sh
 
+if [[ $# -gt 1 ]]; then
+  npm_binary=$1
+  shift
+else
+  npm_binary=npm
+fi
+
 package=$1
+config_file=${2:-package.json}
 version=$(
   jq -r '
     .dependencies["'$package'"] //
     .devDependencies["'$package'"]
-  ' package.json | \
+  ' $config_file | \
   sed \
     -e 's/^[~^]//'
   )
@@ -21,7 +29,7 @@ version=$(
 # datadog-metrics               0.11.0 invalid: "~0.11.1" from the root project
 
 # SCRIPT
-npm info $package --json 2> /dev/null | \
+$npm_binary info $package --json 2> /dev/null | \
  jq -r '"
 \(.name) | \(.license.type? // .license)<BR>
 \(.description)<BR><BR>
@@ -48,7 +56,7 @@ AUTHOR<BR>
 \(.author)<BR><BR>
 
 KEYWORDS<BR>
-\(.keywords // ["-"] | join(", "))<BR>
+\(.keywords // ["–"] | join(", "))<BR>
 "' | \
   tr -d '\n' | \
   sed -E 's/<BR>/\n/g' | \

@@ -1,0 +1,17 @@
+npm-review | GPL
+ncurses-based TUI for reviewing and upgrading/downgrading NPM packages, with vim-like key-bindings.
+
+LATEST
+5.1.1 (2025-05-16)
+
+DEPENDENCIES
+–  
+
+HOMEPAGE
+https://www.daghall.se
+
+AUTHOR
+Markus Daghall <markus@daghall.se>
+
+KEYWORDS
+–

@@ -8,6 +8,7 @@ tests["diff-versions"]="./scripts/diff-versions.sh ./tests/mocks/git-diff.sh"
 tests["read-package-json"]="./scripts/read-package-json.sh ./tests/scripts/read-package-json.input"
 tests["dependencies"]="./scripts/dependencies.sh ./tests/mocks/npm-dependencies.sh %s"
 tests["versions"]="./scripts/versions.sh ./tests/mocks/npm-versions.sh %s"
+tests["info"]="./scripts/info.sh ./tests/mocks/npm-info.sh %s ./tests/scripts/read-package-json.input"
 
 
 # Determine diff program to use when pretty-printing
@@ -50,7 +51,7 @@ function run_test() {
 # Execute all tests
 for test in "${!tests[@]}"; do
   if [[ -f "tests/scripts/$test.variations" ]]; then
-    for variation in $(sed 's/ *#.*//g' tests/scripts/$test.variations); do
+    for variation in $(sed -e 's/ *#.*//g' -e '/^$/d' tests/scripts/$test.variations); do
       test_cmd=$(printf "${tests[$test]}\n" $variation)
       run_test "$test-$variation" "$test_cmd"
     done
