@@ -1,4 +1,4 @@
-.PHONY: all build clean includes
+.PHONY: all build clean includes test
 
 CC := clang++
 CFLAGS := -std=c++17 -Wall -Werror ${CFLAGS}
@@ -62,7 +62,7 @@ watch:
 	@printf "Watching for changes...\n\n"
 	@fswatch src/ --event Updated --one-per-batch | xargs -I @ make _watch
 
-watch-tests:
+watch-tests: test
 	@printf "Watching tests for changes...\n\n"
 	@fswatch tests/ src/ scripts/ --event Updated --one-per-batch | xargs -I @ make test
 
@@ -83,6 +83,7 @@ includes:
 
 t: test
 test: test-runner
+	@clear
 	@echo "Scripts"
 	@./tests/run-tests.sh
 	@echo "TUI"
