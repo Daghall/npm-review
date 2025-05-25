@@ -62,6 +62,10 @@ watch:
 	@printf "Watching for changes...\n\n"
 	@fswatch src/ --event Updated --one-per-batch | xargs -I @ make _watch
 
+watch-tests:
+	@printf "Watching tests for changes...\n\n"
+	@fswatch tests/ src/ scripts/ --event Updated --one-per-batch | xargs -I @ make test
+
 includes:
 	@mkdir -p $(BUILD_DIR)
 	@for file in $$(ls scripts); do \
