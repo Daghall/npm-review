@@ -50,11 +50,10 @@ function run_test() {
 # Execute all tests
 for test in "${!tests[@]}"; do
   if [[ -f "tests/scripts/$test.variations" ]]; then
-    sed 's/ *#.*//g' tests/scripts/$test.variations | \
-      while read -r variation; do
-        test_cmd=$(printf "${tests[$test]}\n" $variation)
-        run_test "$test-$variation" "$test_cmd"
-      done
+    for variation in $(sed 's/ *#.*//g' tests/scripts/$test.variations); do
+      test_cmd=$(printf "${tests[$test]}\n" $variation)
+      run_test "$test-$variation" "$test_cmd"
+    done
   else
     run_test "$test" "${tests[$test]}"
   fi
