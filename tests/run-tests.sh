@@ -7,6 +7,7 @@ declare -A tests
 tests["diff-versions"]="./scripts/diff-versions.sh ./tests/mocks/git-diff.sh"
 tests["read-package-json"]="./scripts/read-package-json.sh ./tests/scripts/read-package-json.input"
 tests["dependencies"]="./scripts/dependencies.sh ./tests/mocks/npm-dependencies.sh %s"
+tests["versions"]="./scripts/versions.sh ./tests/mocks/npm-versions.sh %s"
 
 
 # Determine diff program to use when pretty-printing

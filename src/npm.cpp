@@ -117,7 +117,7 @@ vector<string> get_versions(PACKAGE package, bool fake_http_requests, alternate_
     return fake_response;
   } else { // }}}
     char command[COMMAND_SIZE];
-    snprintf(command, COMMAND_SIZE, VERSIONS_STRING, package.alias.c_str());
+    snprintf(command, COMMAND_SIZE, VERSIONS_STRING, "npm", package.alias.c_str());
     if (alternate_mode != VERSION_CHECK) {
       init_alternate_window();
     }
