@@ -6,6 +6,6 @@
 
 void run_feature(FEATURE feature);
 map<string, vector<string>> read_features(const string& folder);
-vector<FEATURE> parse_features(map<string, vector<string>> &test_files);
+vector<FEATURE> parse_features(map<string, vector<string>> &test_files, TEST_RESULT &result);
 
 #endif // FEATURE_H

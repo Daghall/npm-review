@@ -12,7 +12,7 @@ void run_feature(FEATURE feature)
 
   printf("  Feature: %s\n", feature.name.c_str());
 
-  for (const SCENARIO& scenario : feature.scenarios) {
+  for (const SCENARIO &scenario : feature.scenarios) {
      run_scenario(scenario);
   }
 }
@@ -63,7 +63,7 @@ map<string, vector<string>> read_features(const string& folder)
 // ...
 // output line n
 // ```
-vector<FEATURE> parse_features(map<string, vector<string>> &test_files)
+vector<FEATURE> parse_features(map<string, vector<string>> &test_files, TEST_RESULT &result)
 {
   vector<FEATURE> features;
 
@@ -87,7 +87,7 @@ vector<FEATURE> parse_features(map<string, vector<string>> &test_files)
       } else if (variable_pointer != nullptr) {
         variable_pointer->push_back(line);
       } else if (line[0] == '#') {
-        size_t index = line.find(" ");
+        USHORT index = line.find(" ");
         switch (index) {
         case 1:
           feature.name = line.substr(2);
@@ -97,7 +97,8 @@ vector<FEATURE> parse_features(map<string, vector<string>> &test_files)
             .name = line.substr(3),
             .input = {},
             .expected_output = {},
-            .feature = &feature
+            .feature = &feature,
+            .result = &result,
           });
           read = false;
           break;

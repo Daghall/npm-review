@@ -7,7 +7,14 @@
 
 using namespace std;
 
-struct SCENARIO; // Forward declaration, to avoid circular dependencies
+struct SCENARIO; // Forward declaration
+
+typedef unsigned short USHORT;
+
+typedef struct TEST_RESULT {
+  USHORT passed_tests;
+  USHORT failed_tests;
+} TEST_RESULT;
 
 typedef struct FEATURE {
   string name;
@@ -19,6 +26,7 @@ typedef struct SCENARIO {
   vector<string> input;
   vector<string> expected_output;
   FEATURE *feature;
+  TEST_RESULT *result;
 } SCENARIO;
 
 #endif // TEST_RUNNER_TYPES_H

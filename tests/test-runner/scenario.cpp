@@ -42,14 +42,13 @@ void run_scenario(SCENARIO scenario)
 
     while (result_it != result.end() && expected_it != scenario.expected_output.end()) {
       if (*result_it != *expected_it) {
-        size_t index = result_it - result.begin() + 1;
+        USHORT index = result_it - result.begin() + 1;
         if (success) {
-          printf(scenario_name, "\r", FAILED);
           fflush(stdout);
           success = false;
         }
         printf(scenario_name, "\r", FAILED);
-        printf("\n%s    Missmatch at line %zu:\n", YELLOW, index);
+        printf("\n%s    Missmatch at line %hu:\n", YELLOW, index);
         printf(  "%s    Expected: \"%s\"\n", GREEN, expected_it->c_str());
         printf(  "%s    Actual:   \"%s\"%s", RED, result_it->c_str(), RESET);
       }
@@ -70,8 +69,10 @@ void run_scenario(SCENARIO scenario)
     if (success) {
       printf("\r");
       printf(scenario_name, "\r", PASSED);
+      ++scenario.result->passed_tests;
     } else {
       fs::rename("/tmp/npm-review.dump", "/tmp/npm-review_dump_" + scenario.feature->name + "__" + scenario.name + ".dump");
+      ++scenario.result->failed_tests;
     }
 
     printf("\n%s", RESET);
