@@ -1,4 +1,5 @@
 #include <map>
+#include <regex>
 #include <vector>
 #include <string>
 #include "getopt.h"
@@ -15,11 +16,10 @@ int exit(TEST_RESULT &result, OPTIONS &options) {
 }
 
 int main(int argc, char* argv[]) {
-  // TODO: Support running only one Feature (or Scenario), if specified in argv
-
-  const char *short_options = "bx";
+  const char *short_options = "bxg:";
   struct option long_options[] = {
     {"break",           no_argument,        nullptr,  'b'},
+    {"grep",            required_argument,  nullptr,  'x'},
     {"no-exit-code",    no_argument,        nullptr,  'x'},
     {nullptr,           0,                  nullptr,  0}
   };
@@ -38,10 +38,14 @@ int main(int argc, char* argv[]) {
       case 'x': // --no-exit-code
         options.no_exit_code = true;
         break;
+      case 'g': // --grep
+        options.grep_pattern = optarg;
+        break;
       default:
         fprintf(stderr, "\nUsage: %s [OPTIONS]\n\n", argv[0]);
         fprintf(stderr, "Options:\n"
           "  -b, --break           Break on first failure\n"
+          "  -g, --grep            Filter features/scenarios by name (regex)\n"
           "  -x, --no-exit-code    Do not return an exit code (always 0)\n"
         );
         return 1;
@@ -56,6 +60,32 @@ int main(int argc, char* argv[]) {
   const string test_dir = "./tests/tui/";
   map<string, vector<string>> test_files = read_features(test_dir);
   vector<FEATURE> features = parse_features(test_files, result);
+
+  if (!options.grep_pattern.empty()) {
+    regex grep_regex(options.grep_pattern, regex_constants::icase | regex_constants::extended);
+
+    vector<FEATURE> filtered_features;
+    for (const FEATURE& feature : features) {
+      if (regex_search(feature.name, grep_regex)) {
+        filtered_features.push_back(feature);
+      } else {
+        vector<SCENARIO> filtered_scenarios;
+
+        for (const SCENARIO& scenario : feature.scenarios) {
+          if (regex_search(scenario.name, grep_regex)) {
+            filtered_scenarios.push_back(scenario);
+          }
+        }
+
+        if (!filtered_scenarios.empty()) {
+          FEATURE filtered_feature = feature;
+          filtered_feature.scenarios = filtered_scenarios;
+          filtered_features.push_back(filtered_feature);
+        }
+      }
+    }
+    features = filtered_features;
+  }
 
   for (const FEATURE& feature : features) {
     const bool success = run_feature(feature, options);

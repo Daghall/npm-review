@@ -32,6 +32,7 @@ typedef struct SCENARIO {
 typedef struct options {
   bool break_on_failure;
   bool no_exit_code;
+  string grep_pattern;
 } OPTIONS;
 
 #endif // TEST_RUNNER_TYPES_H
