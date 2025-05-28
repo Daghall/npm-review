@@ -29,4 +29,9 @@ typedef struct SCENARIO {
   TEST_RESULT *result;
 } SCENARIO;
 
+typedef struct options {
+  bool break_on_failure;
+  bool no_exit_code;
+} OPTIONS;
+
 #endif // TEST_RUNNER_TYPES_H

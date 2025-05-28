@@ -6,13 +6,19 @@
 
 namespace fs = filesystem;
 
-void run_feature(FEATURE feature)
+bool run_feature(FEATURE feature, OPTIONS options)
 {
   printf("  Feature: %s\n", feature.name.c_str());
 
   for (const SCENARIO &scenario : feature.scenarios) {
-     run_scenario(scenario);
+     const bool success = run_scenario(scenario, options);
+
+     if (!success && options.break_on_failure) {
+       return false;
+     }
   }
+
+  return true;
 }
 
 map<string, vector<string>> read_features(const string& folder)

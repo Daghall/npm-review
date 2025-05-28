@@ -9,7 +9,7 @@
 
 namespace fs = filesystem;
 
-void run_scenario(SCENARIO scenario)
+bool run_scenario(SCENARIO scenario, OPTIONS options)
 {
   int master_fd;
   pid_t pid = forkpty(&master_fd, NULL, NULL, NULL);
@@ -34,6 +34,7 @@ void run_scenario(SCENARIO scenario)
     write(master_fd, "Q", 1);
     flush_buffer(master_fd);
 
+    // TODO: Use `diff` (or preferably `delta`) to compare the output
     // Check the result
     bool success = true;
     vector<string> result = read_result();
@@ -73,11 +74,19 @@ void run_scenario(SCENARIO scenario)
     } else {
       fs::rename("/tmp/npm-review.dump", "/tmp/npm-review_dump_" + scenario.feature->name + "__" + scenario.name + ".dump");
       ++scenario.result->failed_tests;
+
+      if (options.break_on_failure) {
+        printf("\n%s", RESET);
+        close(master_fd);
+        return false;
+      }
     }
 
     printf("\n%s", RESET);
     close(master_fd);
   }
+
+  return true;
 }
 
 vector<string> read_result()

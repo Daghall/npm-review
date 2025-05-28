@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void run_scenario(SCENARIO scenario);
+bool run_scenario(SCENARIO scenario, OPTIONS options);
 vector<string> read_result();
 void dump_screen(int master_fd);
 void flush_buffer(int master_fd);

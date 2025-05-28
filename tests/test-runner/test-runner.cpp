@@ -1,13 +1,52 @@
 #include <map>
 #include <vector>
 #include <string>
+#include "getopt.h"
 #include "constants.h"
 #include "types.h"
 #include "feature.h"
 
-int main() {
+int exit(TEST_RESULT &result, OPTIONS &options) {
+  if (options.no_exit_code) {
+    return 0;
+  } else {
+    return result.failed_tests;
+  }
+}
+
+int main(int argc, char* argv[]) {
   // TODO: Support running only one Feature (or Scenario), if specified in argv
-  // TODO: Add break on failure, so that the test runner stops on the first failure
+
+  const char *short_options = "bx";
+  struct option long_options[] = {
+    {"break",           no_argument,        nullptr,  'b'},
+    {"no-exit-code",    no_argument,        nullptr,  'x'},
+    {nullptr,           0,                  nullptr,  0}
+  };
+
+  OPTIONS options = {
+    .break_on_failure = false,
+    .no_exit_code = false,
+  };
+
+  char opt;
+  while ((opt = getopt_long(argc, argv, short_options, long_options, nullptr)) != -1) {
+    switch (opt) {
+      case 'b': // --break
+        options.break_on_failure = true;
+        break;
+      case 'x': // --no-exit-code
+        options.no_exit_code = true;
+        break;
+      default:
+        fprintf(stderr, "\nUsage: %s [OPTIONS]\n\n", argv[0]);
+        fprintf(stderr, "Options:\n"
+          "  -b, --break           Break on first failure\n"
+          "  -x, --no-exit-code    Do not return an exit code (always 0)\n"
+        );
+        return 1;
+    }
+  }
 
   TEST_RESULT result = {
     .passed_tests = 0,
@@ -19,7 +58,11 @@ int main() {
   vector<FEATURE> features = parse_features(test_files, result);
 
   for (const FEATURE& feature : features) {
-    run_feature(feature);
+    const bool success = run_feature(feature, options);
+
+    if (!success && options.break_on_failure) {
+      return exit(result, options);
+    }
   }
 
   USHORT max_number = max(result.passed_tests, result.failed_tests);
@@ -31,4 +74,6 @@ int main() {
   }
 
   printf("\n");
+
+  return exit(result, options);
 }

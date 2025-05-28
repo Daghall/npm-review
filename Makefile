@@ -62,9 +62,10 @@ watch:
 	@printf "Watching for changes...\n\n"
 	@fswatch src/ --event Updated --one-per-batch | xargs -I @ make _watch
 
+watch-tests: TEST_FLAGS += --break --no-exit-code
 watch-tests: test
 	@printf "Watching tests for changes...\n\n"
-	@fswatch tests/ src/ scripts/ --event Updated --one-per-batch | xargs -I @ make test
+	@fswatch tests/ src/ scripts/ --event Updated --one-per-batch | TEST_FLAGS="$(TEST_FLAGS)" xargs -I @ make test
 
 includes:
 	@mkdir -p $(BUILD_DIR)
@@ -87,7 +88,7 @@ test: test-runner
 	@echo "Scripts"
 	@./tests/run-tests.sh
 	@echo "TUI"
-	@./test-runner
+	@./test-runner $(TEST_FLAGS)
 
 clean:
 	rm -rf build/
